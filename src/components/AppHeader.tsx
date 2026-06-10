@@ -1,12 +1,15 @@
 import { Link, useNavigate } from "@tanstack/react-router";
+import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { useUserContext } from "@/hooks/useSession";
-import { LogOut, Shield } from "lucide-react";
+import { LogOut, Shield, Heart } from "lucide-react";
+import { DonateModal } from "@/components/DonateModal";
 
 export function AppHeader() {
   const navigate = useNavigate();
   const { user, role, program, fullName } = useUserContext();
+  const [donateOpen, setDonateOpen] = useState(false);
 
   const signOut = async () => {
     await supabase.auth.signOut();
@@ -58,12 +61,18 @@ export function AppHeader() {
               </Button>
             </>
           ) : (
-            <Button asChild size="sm" className="bg-gradient-gold text-primary-foreground">
-              <Link to="/auth">Sign in</Link>
-            </Button>
+            <>
+              <Link to="/auth" className="hidden sm:inline text-xs text-muted-foreground hover:text-foreground">
+                Member sign in
+              </Link>
+              <Button size="sm" onClick={() => setDonateOpen(true)} className="bg-gradient-gold text-primary-foreground font-semibold">
+                <Heart className="h-4 w-4 mr-1.5" /> Make a donation
+              </Button>
+            </>
           )}
         </div>
       </div>
+      <DonateModal open={donateOpen} onOpenChange={setDonateOpen} />
     </header>
   );
 }
