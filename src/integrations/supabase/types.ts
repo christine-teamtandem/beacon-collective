@@ -14,16 +14,222 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      mentor_assignments: {
+        Row: {
+          created_at: string
+          id: string
+          mentee_id: string
+          mentor_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          mentee_id: string
+          mentor_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          mentee_id?: string
+          mentor_id?: string
+        }
+        Relationships: []
+      }
+      parent_links: {
+        Row: {
+          child_id: string
+          created_at: string
+          id: string
+          parent_id: string
+        }
+        Insert: {
+          child_id: string
+          created_at?: string
+          id?: string
+          parent_id: string
+        }
+        Update: {
+          child_id?: string
+          created_at?: string
+          id?: string
+          parent_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          age: number | null
+          avatar_url: string | null
+          bio: string | null
+          created_at: string
+          full_name: string
+          id: string
+          program: Database["public"]["Enums"]["program_type"] | null
+          updated_at: string
+        }
+        Insert: {
+          age?: number | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string
+          id: string
+          program?: Database["public"]["Enums"]["program_type"] | null
+          updated_at?: string
+        }
+        Update: {
+          age?: number | null
+          avatar_url?: string | null
+          bio?: string | null
+          created_at?: string
+          full_name?: string
+          id?: string
+          program?: Database["public"]["Enums"]["program_type"] | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      tracking_logs: {
+        Row: {
+          category: Database["public"]["Enums"]["log_category"]
+          created_at: string
+          id: string
+          mentee_id: string
+          mentor_id: string
+          note: string | null
+          title: string
+          week_number: number | null
+        }
+        Insert: {
+          category: Database["public"]["Enums"]["log_category"]
+          created_at?: string
+          id?: string
+          mentee_id: string
+          mentor_id: string
+          note?: string | null
+          title: string
+          week_number?: number | null
+        }
+        Update: {
+          category?: Database["public"]["Enums"]["log_category"]
+          created_at?: string
+          id?: string
+          mentee_id?: string
+          mentor_id?: string
+          note?: string | null
+          title?: string
+          week_number?: number | null
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          created_at: string
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
+      weekly_progress: {
+        Row: {
+          completed: boolean
+          completed_at: string | null
+          created_at: string
+          id: string
+          mentee_id: string
+          program: Database["public"]["Enums"]["program_type"]
+          reflection: string | null
+          updated_at: string
+          week_number: number
+        }
+        Insert: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mentee_id: string
+          program: Database["public"]["Enums"]["program_type"]
+          reflection?: string | null
+          updated_at?: string
+          week_number: number
+        }
+        Update: {
+          completed?: boolean
+          completed_at?: string | null
+          created_at?: string
+          id?: string
+          mentee_id?: string
+          program?: Database["public"]["Enums"]["program_type"]
+          reflection?: string | null
+          updated_at?: string
+          week_number?: number
+        }
+        Relationships: []
+      }
+      workbook_entries: {
+        Row: {
+          content: string
+          created_at: string
+          id: string
+          mentee_id: string
+          mentor_id: string
+          updated_at: string
+          week_number: number
+        }
+        Insert: {
+          content: string
+          created_at?: string
+          id?: string
+          mentee_id: string
+          mentor_id: string
+          updated_at?: string
+          week_number: number
+        }
+        Update: {
+          content?: string
+          created_at?: string
+          id?: string
+          mentee_id?: string
+          mentor_id?: string
+          updated_at?: string
+          week_number?: number
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      get_user_role: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["app_role"]
+      }
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "mentee" | "mentor" | "admin" | "parent"
+      log_category: "mentee_wins" | "engagement" | "family_liaison"
+      program_type: "vanguard" | "flow"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +356,10 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["mentee", "mentor", "admin", "parent"],
+      log_category: ["mentee_wins", "engagement", "family_liaison"],
+      program_type: ["vanguard", "flow"],
+    },
   },
 } as const
