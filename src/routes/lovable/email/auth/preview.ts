@@ -18,7 +18,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "beacon-collective"
+const SITE_NAME = "Freebleeders Mentorship Hub"
 const ROOT_DOMAIN = "mentorship.freebleeders.org"
 
 // Sample data for preview mode ONLY (not used in actual email sending).

@@ -31,7 +31,7 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "beacon-collective"
+const SITE_NAME = "Freebleeders Mentorship Hub"
 const SENDER_DOMAIN = "notify.mentorship.freebleeders.org"
 const ROOT_DOMAIN = "mentorship.freebleeders.org"
 const FROM_DOMAIN = "mentorship.freebleeders.org"
