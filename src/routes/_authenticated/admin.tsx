@@ -131,6 +131,9 @@ function Overview() {
 function Accounts() {
   const qc = useQueryClient();
   const delFn = useServerFn(deleteAccount);
+  const resetFn = useServerFn(sendPasswordReset);
+  const unlockFn = useServerFn(unlockAccount);
+  const resendFn = useServerFn(resendLoginEmail);
   const { data: accounts = [] } = useAllAccounts();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
@@ -144,6 +147,21 @@ function Accounts() {
   const del = useMutation({
     mutationFn: async (userId: string) => delFn({ data: { userId } }),
     onSuccess: () => { toast.success("Account deleted."); qc.invalidateQueries({ queryKey: ["all-accounts"] }); },
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const reset = useMutation({
+    mutationFn: async (userId: string) => resetFn({ data: { userId } }),
+    onSuccess: (r: any) => toast.success(`Password reset email sent to ${r.email}`),
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const unlock = useMutation({
+    mutationFn: async (userId: string) => unlockFn({ data: { userId } }),
+    onSuccess: () => toast.success("Account unlocked."),
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const resend = useMutation({
+    mutationFn: async (userId: string) => resendFn({ data: { userId } }),
+    onSuccess: (r: any) => toast.success(`Login link sent to ${r.email}`),
     onError: (e) => toast.error((e as Error).message),
   });
 
