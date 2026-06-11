@@ -199,16 +199,29 @@ function Accounts() {
                 <Badge variant="outline" className="capitalize">{a.status}</Badge>
               </div>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => {
-                if (confirm(`Delete ${a.full_name}? This cannot be undone.`)) del.mutate(a.id);
-              }}
-              aria-label="Delete account"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" aria-label="Account actions"><MoreVertical className="h-4 w-4" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => reset.mutate(a.id)}>
+                  <KeyRound className="mr-2 h-4 w-4" /> Send password reset
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => resend.mutate(a.id)}>
+                  <Mail className="mr-2 h-4 w-4" /> Resend login link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => unlock.mutate(a.id)}>
+                  <Unlock className="mr-2 h-4 w-4" /> Unlock account
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => { if (confirm(`Delete ${a.full_name}? This cannot be undone.`)) del.mutate(a.id); }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete account
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ))}
       </CardContent>
