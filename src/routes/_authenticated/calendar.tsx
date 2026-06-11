@@ -118,11 +118,15 @@ function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: b
         {s.description && <p className="text-sm mt-1">{s.description}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {s.zoom_url && (
-          <Button asChild size="sm" variant={joinable ? "default" : "outline"} disabled={!joinable && !muted ? false : false}>
+        {s.zoom_url ? (
+          <Button asChild size="sm" variant={joinable ? "default" : "outline"}>
             <a href={s.zoom_url} target="_blank" rel="noreferrer">
               <Video className="h-3.5 w-3.5 mr-1" /> {joinable ? "Join now" : "Zoom link"}
             </a>
+          </Button>
+        ) : canEdit && !muted && (
+          <Button size="sm" variant="outline" onClick={() => createZoom.mutate()} disabled={createZoom.isPending}>
+            <Video className="h-3.5 w-3.5 mr-1" /> {createZoom.isPending ? "Creating…" : "Create Zoom"}
           </Button>
         )}
         {canEdit && (
