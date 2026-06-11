@@ -23,6 +23,7 @@ import { Route as AuthenticatedCurriculumRouteImport } from './routes/_authentic
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAnnouncementsRouteImport } from './routes/_authenticated/announcements'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as AuthenticatedHubProgramRouteImport } from './routes/_authenticated/hub.$program'
 import { Route as AuthenticatedCurriculumWeekRouteImport } from './routes/_authenticated/curriculum.$week'
 
 const AuthRoute = AuthRouteImport.update({
@@ -95,6 +96,11 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedHubProgramRoute = AuthenticatedHubProgramRouteImport.update({
+  id: '/hub/$program',
+  path: '/hub/$program',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedCurriculumWeekRoute =
   AuthenticatedCurriculumWeekRouteImport.update({
     id: '/$week',
@@ -117,6 +123,7 @@ export interface FileRoutesByFullPath {
   '/tracking': typeof AuthenticatedTrackingRoute
   '/workbook': typeof AuthenticatedWorkbookRoute
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
+  '/hub/$program': typeof AuthenticatedHubProgramRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByTo {
   '/tracking': typeof AuthenticatedTrackingRoute
   '/workbook': typeof AuthenticatedWorkbookRoute
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
+  '/hub/$program': typeof AuthenticatedHubProgramRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -151,6 +159,7 @@ export interface FileRoutesById {
   '/_authenticated/tracking': typeof AuthenticatedTrackingRoute
   '/_authenticated/workbook': typeof AuthenticatedWorkbookRoute
   '/_authenticated/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
+  '/_authenticated/hub/$program': typeof AuthenticatedHubProgramRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -169,6 +178,7 @@ export interface FileRouteTypes {
     | '/tracking'
     | '/workbook'
     | '/curriculum/$week'
+    | '/hub/$program'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/tracking'
     | '/workbook'
     | '/curriculum/$week'
+    | '/hub/$program'
   id:
     | '__root__'
     | '/'
@@ -202,6 +213,7 @@ export interface FileRouteTypes {
     | '/_authenticated/tracking'
     | '/_authenticated/workbook'
     | '/_authenticated/curriculum/$week'
+    | '/_authenticated/hub/$program'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -310,6 +322,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/hub/$program': {
+      id: '/_authenticated/hub/$program'
+      path: '/hub/$program'
+      fullPath: '/hub/$program'
+      preLoaderRoute: typeof AuthenticatedHubProgramRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/curriculum/$week': {
       id: '/_authenticated/curriculum/$week'
       path: '/$week'
@@ -346,6 +365,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
   AuthenticatedTrackingRoute: typeof AuthenticatedTrackingRoute
   AuthenticatedWorkbookRoute: typeof AuthenticatedWorkbookRoute
+  AuthenticatedHubProgramRoute: typeof AuthenticatedHubProgramRoute
 }
 
 const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
@@ -360,6 +380,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
   AuthenticatedTrackingRoute: AuthenticatedTrackingRoute,
   AuthenticatedWorkbookRoute: AuthenticatedWorkbookRoute,
+  AuthenticatedHubProgramRoute: AuthenticatedHubProgramRoute,
 }
 
 const AuthenticatedRouteRouteWithChildren =
@@ -373,3 +394,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
