@@ -58,10 +58,12 @@ function AdminPortal() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
           <TabsTrigger value="quick-links">Shortcuts</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4"><Overview /></TabsContent>
         <TabsContent value="accounts" className="mt-4"><Accounts /></TabsContent>
+        <TabsContent value="diagnostics" className="mt-4"><Diagnostics /></TabsContent>
         <TabsContent value="quick-links" className="mt-4"><Shortcuts /></TabsContent>
       </Tabs>
 
