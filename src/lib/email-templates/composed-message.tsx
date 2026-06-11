@@ -16,10 +16,10 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{subject || 'New message from Vanguard & Flow'}</Preview>
+      <Preview>{subject || 'New message from freebleeders mentorship hub'}</Preview>
       <Body style={main}>
         <Container style={container}>
-          <Text style={brand}>Vanguard &amp; Flow</Text>
+          <Text style={brand}>FREEBLEEDERS</Text>
           <Heading style={h1}>{subject || 'A message for you'}</Heading>
           <Section>
             {paragraphs.length === 0 ? (
@@ -32,7 +32,7 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
           <Text style={meta}>
             <strong>{senderName || 'A member'}</strong>
             {senderRole ? ` (${senderRole})` : ''} sent this message through the
-            Vanguard &amp; Flow mentorship hub.
+            freebleeders mentorship hub.
           </Text>
         </Container>
       </Body>
@@ -42,7 +42,7 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
 
 export const template = {
   component: ComposedMessage,
-  subject: (data: Record<string, any>) => data.subject || 'Message from Vanguard & Flow',
+  subject: (data: Record<string, any>) => data.subject || 'Message from freebleeders mentorship hub',
   displayName: 'Hub composed message',
   previewData: {
     senderName: 'Tracy Hamler',

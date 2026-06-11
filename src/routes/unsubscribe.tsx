@@ -51,13 +51,13 @@ function UnsubscribePage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Email preferences</CardTitle>
-          <CardDescription>Vanguard &amp; Flow mentorship</CardDescription>
+          <CardDescription>freebleeders mentorship hub</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {state === "loading" && <p className="text-sm text-muted-foreground">Loading...</p>}
           {state === "valid" && (
             <>
-              <p className="text-sm">Click below to unsubscribe from Vanguard &amp; Flow emails.</p>
+              <p className="text-sm">Click below to unsubscribe from freebleeders mentorship hub emails.</p>
               <Button onClick={confirm} className="w-full">Confirm unsubscribe</Button>
             </>
           )}
