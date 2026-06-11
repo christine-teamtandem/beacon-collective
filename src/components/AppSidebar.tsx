@@ -7,7 +7,7 @@ import { useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
-  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle,
+  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,13 +21,16 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
   ];
   if (role === "admin") {
     return [
+      { label: "Super Admin", items: [
+        { title: "Admin Portal", url: "/admin", icon: ShieldCheck },
+        { title: "Students", url: "/people", icon: Users },
+        { title: "Sponsor Reports", url: "/reports", icon: BarChart3 },
+      ]},
       { label: "Admin", items: [
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "Students", url: "/people", icon: Users },
         { title: "Tracking Logs", url: "/tracking", icon: ClipboardList },
         { title: "Workbook Reviews", url: "/workbook", icon: FileText },
         { title: "Resources", url: "/resources", icon: FolderOpen },
-        { title: "Sponsor Reports", url: "/reports", icon: BarChart3 },
       ]},
       { label: "Communication", items: comms },
       { label: "Curriculum", items: [
