@@ -202,10 +202,10 @@ export const hubSmokeTest = createServerFn({ method: "POST" })
     const checks: Array<{ name: string; ok: boolean; detail: string }> = [];
 
     const tableCount = async (t: string) => {
-      const { count, error } = await supabaseAdmin
+      const { count, error } = await (supabaseAdmin as any)
         .from(t)
         .select("*", { count: "exact", head: true });
-      return { count: count ?? 0, error: error?.message };
+      return { count: (count as number) ?? 0, error: (error as { message?: string } | null)?.message };
     };
 
     for (const t of ["profiles", "user_roles", "mentor_assignments", "parent_links", "sessions"]) {
