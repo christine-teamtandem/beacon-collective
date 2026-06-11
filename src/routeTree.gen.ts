@@ -34,6 +34,7 @@ import { Route as LovableEmailTransactionalPreviewRouteImport } from './routes/l
 import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/email/queue/process'
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
+import { Route as ApiPublicZoomCallbackRouteImport } from './routes/api/public/zoom/callback'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -164,6 +165,11 @@ const LovableEmailAuthPreviewRoute = LovableEmailAuthPreviewRouteImport.update({
   path: '/lovable/email/auth/preview',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicZoomCallbackRoute = ApiPublicZoomCallbackRouteImport.update({
+  id: '/api/public/zoom/callback',
+  path: '/api/public/zoom/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
   '/hub/$program': typeof AuthenticatedHubProgramRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/zoom/callback': typeof ApiPublicZoomCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -211,6 +218,7 @@ export interface FileRoutesByTo {
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
   '/hub/$program': typeof AuthenticatedHubProgramRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/zoom/callback': typeof ApiPublicZoomCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/_authenticated/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
   '/_authenticated/hub/$program': typeof AuthenticatedHubProgramRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
+  '/api/public/zoom/callback': typeof ApiPublicZoomCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
   '/lovable/email/queue/process': typeof LovableEmailQueueProcessRoute
@@ -267,6 +276,7 @@ export interface FileRouteTypes {
     | '/curriculum/$week'
     | '/hub/$program'
     | '/lovable/email/suppression'
+    | '/api/public/zoom/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -293,6 +303,7 @@ export interface FileRouteTypes {
     | '/curriculum/$week'
     | '/hub/$program'
     | '/lovable/email/suppression'
+    | '/api/public/zoom/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -320,6 +331,7 @@ export interface FileRouteTypes {
     | '/_authenticated/curriculum/$week'
     | '/_authenticated/hub/$program'
     | '/lovable/email/suppression'
+    | '/api/public/zoom/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
     | '/lovable/email/queue/process'
@@ -334,6 +346,7 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicZoomCallbackRoute: typeof ApiPublicZoomCallbackRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
   LovableEmailQueueProcessRoute: typeof LovableEmailQueueProcessRoute
@@ -518,6 +531,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailAuthPreviewRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/zoom/callback': {
+      id: '/api/public/zoom/callback'
+      path: '/api/public/zoom/callback'
+      fullPath: '/api/public/zoom/callback'
+      preLoaderRoute: typeof ApiPublicZoomCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -577,6 +597,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicZoomCallbackRoute: ApiPublicZoomCallbackRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
   LovableEmailQueueProcessRoute: LovableEmailQueueProcessRoute,
@@ -586,13 +607,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
