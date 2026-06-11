@@ -5,11 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
-import { PROGRAMS } from "@/lib/curriculum";
 import { Shield } from "lucide-react";
 
 const searchSchema = z.object({ program: z.enum(["vanguard", "flow"]).optional() });
