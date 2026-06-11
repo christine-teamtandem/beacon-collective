@@ -65,6 +65,7 @@ export type Database = {
           full_name: string
           id: string
           program: Database["public"]["Enums"]["program_type"] | null
+          status: Database["public"]["Enums"]["profile_status"]
           updated_at: string
         }
         Insert: {
@@ -75,6 +76,7 @@ export type Database = {
           full_name?: string
           id: string
           program?: Database["public"]["Enums"]["program_type"] | null
+          status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
         }
         Update: {
@@ -85,7 +87,53 @@ export type Database = {
           full_name?: string
           id?: string
           program?: Database["public"]["Enums"]["program_type"] | null
+          status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
+        }
+        Relationships: []
+      }
+      resources: {
+        Row: {
+          created_at: string
+          description: string | null
+          external_url: string | null
+          id: string
+          kind: string
+          program: Database["public"]["Enums"]["program_type"]
+          storage_bucket: string | null
+          storage_path: string | null
+          title: string
+          updated_at: string
+          uploaded_by: string
+          week_number: number | null
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          kind?: string
+          program: Database["public"]["Enums"]["program_type"]
+          storage_bucket?: string | null
+          storage_path?: string | null
+          title: string
+          updated_at?: string
+          uploaded_by: string
+          week_number?: number | null
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          external_url?: string | null
+          id?: string
+          kind?: string
+          program?: Database["public"]["Enums"]["program_type"]
+          storage_bucket?: string | null
+          storage_path?: string | null
+          title?: string
+          updated_at?: string
+          uploaded_by?: string
+          week_number?: number | null
         }
         Relationships: []
       }
@@ -214,6 +262,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      get_user_program: {
+        Args: { _user_id: string }
+        Returns: Database["public"]["Enums"]["program_type"]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]
@@ -229,6 +281,7 @@ export type Database = {
     Enums: {
       app_role: "mentee" | "mentor" | "admin" | "parent"
       log_category: "mentee_wins" | "engagement" | "family_liaison"
+      profile_status: "active" | "pending" | "inactive"
       program_type: "vanguard" | "flow"
     }
     CompositeTypes: {
@@ -359,6 +412,7 @@ export const Constants = {
     Enums: {
       app_role: ["mentee", "mentor", "admin", "parent"],
       log_category: ["mentee_wins", "engagement", "family_liaison"],
+      profile_status: ["active", "pending", "inactive"],
       program_type: ["vanguard", "flow"],
     },
   },
