@@ -55,10 +55,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Vanguard & Flow — Elite Youth Mentorship" },
+      { title: "freebleeders mentorship hub — Elite Youth Mentorship" },
       { name: "description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
-      { property: "og:title", content: "Vanguard & Flow — Elite Youth Mentorship" },
-      { name: "twitter:title", content: "Vanguard & Flow — Elite Youth Mentorship" },
+      { property: "og:title", content: "freebleeders mentorship hub — Elite Youth Mentorship" },
+      { name: "twitter:title", content: "freebleeders mentorship hub — Elite Youth Mentorship" },
       { property: "og:description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
       { name: "twitter:description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ed200a09-af74-4564-bd8b-568713b6476b" },
