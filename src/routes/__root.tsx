@@ -94,27 +94,6 @@ function RootComponent() {
     return () => subscription.unsubscribe();
   }, [router, queryClient]);
 
-  // Dev auto-login as superadmin (Lovable preview / local dev only).
-  // This is skipped on the published production domain.
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const host = window.location.hostname;
-    const isDev =
-      import.meta.env.DEV ||
-      host === "localhost" ||
-      host === "127.0.0.1" ||
-      host.endsWith(".lovableproject.com") ||
-      host.endsWith(".lovable.dev");
-    if (!isDev) return;
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      if (data.session) return;
-      await supabase.auth.signInWithPassword({
-        email: "freebleeders@gmail.com",
-        password: "bleeders2026!",
-      });
-    })();
-  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
