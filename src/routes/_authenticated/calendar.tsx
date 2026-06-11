@@ -18,6 +18,7 @@ import { getZoomConnection, getZoomAuthUrl, disconnectZoom, createZoomMeetingFor
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
+  validateSearch: (s: Record<string, unknown>) => ({ zoom: typeof s.zoom === "string" ? s.zoom : undefined }),
 });
 
 function CalendarPage() {
