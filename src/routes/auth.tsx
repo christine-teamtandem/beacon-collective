@@ -61,58 +61,21 @@ function AuthPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-6 shadow-elegant">
-            <Tabs defaultValue="signin">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Create account</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4 mt-4">
-                  <Field label="Email" name="email" type="email" required />
-                  <Field label="Password" name="password" type="password" required />
-                  <Button disabled={loading} type="submit" className="w-full bg-gradient-gold text-primary-foreground font-semibold">
-                    {loading ? "Signing in..." : "Sign in"}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4 mt-4">
-                  <Field label="Full name" name="fullName" required />
-                  <Field label="Email" name="email" type="email" required />
-                  <Field label="Password" name="password" type="password" required minLength={6} />
-
-                  <div className="space-y-2">
-                    <Label>I am a</Label>
-                    <Select name="role" defaultValue="mentee" required>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mentee">Mentee (12–18)</SelectItem>
-                        <SelectItem value="mentor">Mentor</SelectItem>
-                        <SelectItem value="parent">Parent / Family</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Admins are assigned by the team.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Program</Label>
-                    <Select name="program" defaultValue={presetProgram}>
-                      <SelectTrigger><SelectValue placeholder="Choose program" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="vanguard">{PROGRAMS.vanguard.name}</SelectItem>
-                        <SelectItem value="flow">{PROGRAMS.flow.name}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button disabled={loading} type="submit" className="w-full bg-gradient-gold text-primary-foreground font-semibold">
-                    {loading ? "Creating..." : "Create account"}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <Field label="Email" name="email" type="email" required />
+              <Field label="Password" name="password" type="password" required />
+              <Button disabled={loading} type="submit" className="w-full bg-gradient-gold text-primary-foreground font-semibold">
+                {loading ? "Signing in..." : "Sign in"}
+              </Button>
+            </form>
+            <div className="mt-6 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">Need an account?</p>
+              <p className="mt-1">
+                Accounts are created by program admins. Contact your coordinator or email{" "}
+                <a className="text-program underline" href="mailto:freebleeders@gmail.com">freebleeders@gmail.com</a> to get set up.
+              </p>
+              <p className="mt-2">Parents: once your account is created, you can add your child from your dashboard.</p>
+            </div>
           </div>
           <p className="text-center text-xs text-muted-foreground mt-6">
             <Link to="/" className="hover:text-foreground">← Back to home</Link>
