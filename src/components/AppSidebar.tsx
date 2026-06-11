@@ -7,13 +7,18 @@ import { useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
-  Shield, Heart, LogOut, Users,
+  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
 
 function itemsFor(role: AppRole | null, _program: Program | null): { label: string; items: Item[] }[] {
+  const comms: Item[] = [
+    { title: "Calendar", url: "/calendar", icon: Calendar },
+    { title: "Announcements", url: "/announcements", icon: Megaphone },
+    { title: "Messages", url: "/messages", icon: MessageCircle },
+  ];
   if (role === "admin") {
     return [
       { label: "Admin", items: [
@@ -24,32 +29,42 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
         { title: "Resources", url: "/resources", icon: FolderOpen },
         { title: "Sponsor Reports", url: "/reports", icon: BarChart3 },
       ]},
+      { label: "Communication", items: comms },
       { label: "Curriculum", items: [
         { title: "12-Week Curriculum", url: "/curriculum", icon: Shield },
       ]},
     ];
   }
   if (role === "mentor") {
-    return [{ label: "Mentor", items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "My Mentees", url: "/tracking", icon: Users },
-      { title: "Workbook", url: "/workbook", icon: FileText },
-      { title: "Curriculum", url: "/curriculum", icon: BookOpen },
-      { title: "Resources", url: "/resources", icon: FolderOpen },
-    ]}];
+    return [
+      { label: "Mentor", items: [
+        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+        { title: "My Mentees", url: "/tracking", icon: Users },
+        { title: "Workbook", url: "/workbook", icon: FileText },
+        { title: "Curriculum", url: "/curriculum", icon: BookOpen },
+        { title: "Resources", url: "/resources", icon: FolderOpen },
+      ]},
+      { label: "Communication", items: comms },
+    ];
   }
   if (role === "parent") {
-    return [{ label: "Family", items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "Resources", url: "/resources", icon: FolderOpen },
-    ]}];
+    return [
+      { label: "Family", items: [
+        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+        { title: "Resources", url: "/resources", icon: FolderOpen },
+      ]},
+      { label: "Communication", items: comms },
+    ];
   }
-  return [{ label: "My Hub", items: [
-    { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-    { title: "Curriculum", url: "/curriculum", icon: BookOpen },
-    { title: "My Workbook", url: "/workbook", icon: FileText },
-    { title: "Resources", url: "/resources", icon: FolderOpen },
-  ]}];
+  return [
+    { label: "My Hub", items: [
+      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
+      { title: "Curriculum", url: "/curriculum", icon: BookOpen },
+      { title: "My Workbook", url: "/workbook", icon: FileText },
+      { title: "Resources", url: "/resources", icon: FolderOpen },
+    ]},
+    { label: "Communication", items: comms },
+  ];
 }
 
 export function AppSidebar() {

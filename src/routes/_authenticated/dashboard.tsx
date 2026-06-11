@@ -66,6 +66,15 @@ function MenteeDashboard({ userId, program }: { userId: string; program: "vangua
   const pct = (completed / curriculum.length) * 100;
   const nextWeek = curriculum.find((w) => !progress.find((p) => p.week_number === w.week && p.completed));
 
+  const { data: upcoming = [] } = useQuery({
+    queryKey: ["dash-upcoming", program],
+    queryFn: async () => {
+      const { data } = await supabase.from("sessions").select("*")
+        .gte("ends_at", new Date().toISOString()).order("starts_at", { ascending: true }).limit(3);
+      return data ?? [];
+    },
+  });
+
   return (
     <>
       <div className="grid md:grid-cols-3 gap-4">
@@ -73,6 +82,26 @@ function MenteeDashboard({ userId, program }: { userId: string; program: "vangua
         <StatCard icon={<Calendar className="h-4 w-4" />} label="Current week" value={nextWeek ? `W${nextWeek.week}` : "Done!"} />
         <StatCard icon={<BookOpen className="h-4 w-4" />} label="Progress" value={`${Math.round(pct)}%`} />
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Upcoming Zoom Schedule</CardTitle>
+          <CardDescription>Your next mentorship sessions.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {upcoming.length === 0 && <p className="text-sm text-muted-foreground">No sessions scheduled yet.</p>}
+          {upcoming.map((s) => (
+            <div key={s.id} className="flex items-center justify-between rounded-md border border-border p-3">
+              <div className="min-w-0">
+                <p className="font-semibold truncate">{s.title}</p>
+                <p className="text-xs text-muted-foreground">{new Date(s.starts_at).toLocaleString()}</p>
+              </div>
+              {s.zoom_url && <Button asChild size="sm" variant="outline"><a href={s.zoom_url} target="_blank" rel="noreferrer">Join</a></Button>}
+            </div>
+          ))}
+          <Button asChild variant="ghost" size="sm" className="w-full mt-2"><Link to="/calendar">Open calendar</Link></Button>
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
@@ -103,6 +132,7 @@ function MenteeDashboard({ userId, program }: { userId: string; program: "vangua
     </>
   );
 }
+
 
 function MentorDashboard({ userId }: { userId: string }) {
   const { data: mentees = [] } = useQuery({

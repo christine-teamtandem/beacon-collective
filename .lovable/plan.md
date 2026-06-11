@@ -1,79 +1,89 @@
-Malaki ang scope, kaya hahatiin ko sa **2 rounds** para malinis ang build at madaling i-review. Round 1 ngayon, Round 2 sa susunod na message.
-
-## Round 1 — Foundations (gagawin ko ngayon)
-
-### A. Program separation (Vanguard vs Flow — hindi na magsasama)
-- Bawat program may sariling route tree at sidebar: `/vanguard/...` at `/flow/...`
-- Hindi makikita ng Vanguard mentee ang Flow content (at vice versa) — enforced sa server + RLS
-- Bawat program may sariling accent color: **Vanguard = gold**, **Flow = rose**
-- Bawat user na naka-assign sa isang program ay auto-redirect sa kanyang program hub
-
-### B. Admin assignment & monitoring (Admin-only)
-- Bagong `/admin` area (admin role lang ang makakapasok)
-- **Students page**: lahat ng mentees — search, filter by program/status, **assign to Vanguard/Flow**, assign to mentor, edit profile, deactivate
-- **Mentor assignment**: i-link ang mentee sa mentor
-- **Per-student monitor**: view ng workbook entries, weekly progress, tracking logs ng kahit sinong student
-- Mentees sign up walang program (defaults to "unassigned"); admin ang nag-aassign
-
-### C. New sidebar dashboard UI (360Learning / E-learning vibe)
-- Iiwan ang dating top-nav `AppHeader`. Bagong **persistent sidebar** (shadcn `sidebar`) + clean white/navy palette w/ program accent
-- Sidebar items (mentee): Dashboard, My Workbook, Curriculum, Resources, Calendar, Announcements, Messages, Profile
-- Sidebar items (mentor): Dashboard, My Mentees, Curriculum, Resources, Calendar, Announcements, Messages, Profile
-- Sidebar items (admin): Dashboard, Students, Mentors, Programs, Resources, Announcements, Reports
-- Role-based main dashboard view:
-  - **Mentee**: stat cards (current week, workbook progress, sessions attended, hours), active workbook card, upcoming session, recent announcements
-  - **Mentor**: stat cards (total mentees, pending reviews, this week's sessions), mentee list with engagement indicators
-  - **Admin**: stat cards (total students, mentors, active programs, weekly engagement), recent assignments
-- Collapsible sidebar, mobile-responsive (drawer on mobile)
-
-### D. Resource library (upload/download)
-- Lovable Cloud Storage bucket per program (`resources-vanguard`, `resources-flow`) — private
-- Mentors/admins can upload PDFs, workbooks, links (tagged by week)
-- Mentees see only their program's resources
-- Download with signed URLs
-
-## Round 2 — Communication (next message, after Round 1 lands)
-- Integrated calendar (sessions w/ Zoom link field, ICS export)
-- Announcements feed (program-scoped, mentor/admin post)
-- Realtime 1:1 mentor↔mentee chat + cohort group chat (Supabase Realtime)
-
-Splitting it para hindi sumabog ang build at madali mong i-test bawat layer.
+Malaking scope ulit — hahatiin sa **2 sub-rounds** para malinis ang build at madaling i-test bawat layer.
 
 ---
 
-## Technical sketch (for the curious)
+## Round 2A — Communication & Scheduling (gagawin ngayon)
 
-**New tables (Round 1):**
-- `resources` (id, program, week, title, description, file_path, uploaded_by, created_at)
-- Extend `profiles.program` enum already exists; add `status` ('active'|'pending'|'inactive')
-- `mentor_assignments` already exists — reuse for mentor↔mentee linkage
+### 1. Calendar + Zoom sessions
+- New table `sessions` (program, mentor_id, cohort, title, starts_at, ends_at, zoom_url, notes, created_by)
+- Mentor/admin: create/edit/delete sessions for their mentees
+- Mentee: read-only calendar view of their program/cohort sessions + "Join Zoom" button when within ±15 min
+- Route `/calendar` — month + agenda view (shadcn `calendar` + list)
+- Dashboard widget: "Upcoming Zoom Schedule" (next 3)
 
-**Routing:**
-```text
-src/routes/
-  _authenticated/
-    route.tsx                  (existing gate)
-    dashboard.tsx              (router → /vanguard or /flow based on assignment; unassigned → waiting page)
-    vanguard/
-      route.tsx                (program guard + gold sidebar shell)
-      index.tsx                (program dashboard)
-      workbook.tsx, curriculum.tsx, curriculum.$week.tsx,
-      resources.tsx, profile.tsx
-    flow/
-      (same as vanguard, rose accent)
-    admin/
-      route.tsx                (admin role guard + admin sidebar)
-      index.tsx                (admin dashboard)
-      students.tsx, students.$id.tsx,
-      mentors.tsx, resources.tsx
-```
+### 2. Announcements Feed
+- New table `announcements` (program, title, body, author_id, pinned, created_at)
+- Mentor/admin posts → scoped sa program nila
+- Mentee sees only their program's feed
+- Route `/announcements` + dashboard "Latest Announcements" widget (top 3)
+- Simple unread badge sa sidebar (compares `last_seen_announcements_at` on profile)
 
-**Sidebar:** new `components/AppSidebar.tsx` driven by role + program; `SidebarProvider` wraps `_authenticated/route.tsx`. Old `AppHeader` keeps trigger + user menu.
+### 3. Realtime Chat (1:1 + group) + Presence
+- Tables:
+  - `chat_threads` (id, kind: 'direct'|'group', program, cohort, title)
+  - `chat_thread_members` (thread_id, user_id, last_read_at)
+  - `chat_messages` (thread_id, sender_id, body, created_at)
+- 1:1 auto-thread between mentee ↔ assigned mentor (lookup via existing `mentor_assignments`)
+- Group thread per program/cohort, auto-membership
+- Mentees can ONLY see threads they belong to (RLS via thread_members)
+- Realtime via `supabase_realtime` publication + `presence` channel for online/active dots
+- Route `/messages` — thread list left, message pane right, presence indicator
+- Mentor "Help Questions" inbox = direct threads with mentees
 
-**Storage:** two private buckets via `storage_create_bucket`; RLS on `storage.objects` scoped by `(bucket_id, profiles.program)`; signed-URL download via a `createServerFn`.
+### 4. Realtime notifications (lightweight)
+- Toast (sonner) on new announcement / new direct message / new session within next hour
+- Sidebar dot counters from realtime channels
 
-**Server functions:** `listStudents`, `assignProgram`, `assignMentor`, `getStudentDetail`, `listResources`, `uploadResource`, `getResourceDownloadUrl` — all with `requireSupabaseAuth` + role/program checks.
+---
 
-**Migrations needed (Round 1):** add `profiles.status`, create `resources` table + GRANTs + RLS, ensure `program_type` enum has both values, helper function `get_user_program(uuid)`. Two private storage buckets created via tool (not SQL).
+## Round 2B — Admin Power Tools (next message after 2A lands)
 
-Confirm para mag-proceed ako sa Round 1, or sabihin kung anong iaadjust.
+### 5. Assignment monitoring
+- Admin `/admin/assignments` — table of mentor↔mentees with attendance %, workbook completion %, last activity, message volume
+- Per-mentor drill-down
+- Mentor view of own mentees' engagement on `/tracking`
+
+### 6. Super Admin Impersonation / Preview Hub
+- Admin-only `/admin/users` list with **"Preview Hub"** button per user
+- Sets a client-side `impersonate_user_id` (sessionStorage) + server-validated context: any read uses the impersonated user's role/program (admin can re-derive on server through a `getEffectiveContext` serverFn that checks caller is admin first)
+- All sidebars/dashboards re-render through the impersonated view
+- Floating **"Exit Preview"** banner at top — one click clears impersonation
+- **Audit log table** `admin_impersonations` (admin_id, target_user_id, started_at, ended_at)
+- Security: server functions accept an optional `impersonate` arg and ONLY honor it if `has_role(caller, 'admin')`; otherwise ignored
+
+### 7. Branding controls
+- Admin `/admin/branding`: upload logo per program, accent color override (writes to CSS vars at runtime)
+- Stored in `branding` table (program, logo_url, accent_hex)
+
+### 8. Admin account creation
+- Admin can create mentees/mentors via Supabase Admin API in a serverFn (uses `supabaseAdmin.auth.admin.createUser`) — sets temp password, sends invite email
+- Form: email, full name, role, program, assigned mentor (if mentee)
+
+---
+
+## Technical sketch for 2A
+
+**Migrations:**
+- `sessions`, `announcements`, `chat_threads`, `chat_thread_members`, `chat_messages` + GRANTs + RLS
+- `profiles.last_seen_announcements_at timestamptz`
+- `ALTER PUBLICATION supabase_realtime ADD TABLE ...` for chat_messages, announcements, sessions
+- Trigger: when `mentor_assignments` row inserted → auto-create direct `chat_threads` + members; when profile assigned to program → auto-add to program group thread
+
+**RLS highlights:**
+- `sessions`: read where `program = get_user_program(auth.uid())` OR admin; write where mentor of that program/cohort OR admin
+- `announcements`: read where `program = get_user_program(auth.uid())` OR admin; write where mentor/admin
+- `chat_messages`: read where `EXISTS (select 1 from chat_thread_members where thread_id = chat_messages.thread_id and user_id = auth.uid())`; insert same + sender_id = auth.uid()
+- `chat_threads`/`chat_thread_members`: similar membership-based
+
+**ServerFns:**
+- `listUpcomingSessions`, `createSession`, `updateSession`, `deleteSession`
+- `listAnnouncements`, `createAnnouncement`, `markAnnouncementsRead`
+- `listMyThreads`, `getThreadMessages`, `sendMessage`, `ensureDirectThread(menteeId)`
+
+**Files:**
+- `src/routes/_authenticated/calendar.tsx`, `announcements.tsx`, `messages.tsx`, `messages.$threadId.tsx`
+- `src/lib/sessions.functions.ts`, `announcements.functions.ts`, `chat.functions.ts`
+- `src/components/PresenceDot.tsx`, `UpcomingSessionsCard.tsx`, `AnnouncementsCard.tsx`
+- Sidebar updated to add Calendar / Announcements / Messages
+
+Confirm to proceed with **Round 2A**, then 2B sa susunod.
