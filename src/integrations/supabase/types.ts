@@ -14,6 +14,127 @@ export type Database = {
   }
   public: {
     Tables: {
+      announcements: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          pinned: boolean
+          program: Database["public"]["Enums"]["program_type"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          program: Database["public"]["Enums"]["program_type"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          pinned?: boolean
+          program?: Database["public"]["Enums"]["program_type"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      chat_messages: {
+        Row: {
+          body: string
+          created_at: string
+          id: string
+          sender_id: string
+          thread_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          id?: string
+          sender_id: string
+          thread_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          id?: string
+          sender_id?: string
+          thread_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_messages_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_thread_members: {
+        Row: {
+          joined_at: string
+          last_read_at: string
+          thread_id: string
+          user_id: string
+        }
+        Insert: {
+          joined_at?: string
+          last_read_at?: string
+          thread_id: string
+          user_id: string
+        }
+        Update: {
+          joined_at?: string
+          last_read_at?: string
+          thread_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chat_thread_members_thread_id_fkey"
+            columns: ["thread_id"]
+            isOneToOne: false
+            referencedRelation: "chat_threads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chat_threads: {
+        Row: {
+          cohort: string | null
+          created_at: string
+          id: string
+          kind: Database["public"]["Enums"]["thread_kind"]
+          program: Database["public"]["Enums"]["program_type"] | null
+          title: string | null
+        }
+        Insert: {
+          cohort?: string | null
+          created_at?: string
+          id?: string
+          kind: Database["public"]["Enums"]["thread_kind"]
+          program?: Database["public"]["Enums"]["program_type"] | null
+          title?: string | null
+        }
+        Update: {
+          cohort?: string | null
+          created_at?: string
+          id?: string
+          kind?: Database["public"]["Enums"]["thread_kind"]
+          program?: Database["public"]["Enums"]["program_type"] | null
+          title?: string | null
+        }
+        Relationships: []
+      }
       mentor_assignments: {
         Row: {
           created_at: string
@@ -64,6 +185,7 @@ export type Database = {
           created_at: string
           full_name: string
           id: string
+          last_seen_announcements_at: string | null
           program: Database["public"]["Enums"]["program_type"] | null
           status: Database["public"]["Enums"]["profile_status"]
           updated_at: string
@@ -75,6 +197,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id: string
+          last_seen_announcements_at?: string | null
           program?: Database["public"]["Enums"]["program_type"] | null
           status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
@@ -86,6 +209,7 @@ export type Database = {
           created_at?: string
           full_name?: string
           id?: string
+          last_seen_announcements_at?: string | null
           program?: Database["public"]["Enums"]["program_type"] | null
           status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
@@ -134,6 +258,51 @@ export type Database = {
           updated_at?: string
           uploaded_by?: string
           week_number?: number | null
+        }
+        Relationships: []
+      }
+      sessions: {
+        Row: {
+          cohort: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          ends_at: string
+          id: string
+          mentor_id: string | null
+          program: Database["public"]["Enums"]["program_type"]
+          starts_at: string
+          title: string
+          updated_at: string
+          zoom_url: string | null
+        }
+        Insert: {
+          cohort?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          ends_at: string
+          id?: string
+          mentor_id?: string | null
+          program: Database["public"]["Enums"]["program_type"]
+          starts_at: string
+          title: string
+          updated_at?: string
+          zoom_url?: string | null
+        }
+        Update: {
+          cohort?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          ends_at?: string
+          id?: string
+          mentor_id?: string | null
+          program?: Database["public"]["Enums"]["program_type"]
+          starts_at?: string
+          title?: string
+          updated_at?: string
+          zoom_url?: string | null
         }
         Relationships: []
       }
@@ -281,12 +450,17 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_thread_member: {
+        Args: { _thread_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
       app_role: "mentee" | "mentor" | "admin" | "parent"
       log_category: "mentee_wins" | "engagement" | "family_liaison"
       profile_status: "active" | "pending" | "inactive"
       program_type: "vanguard" | "flow"
+      thread_kind: "direct" | "group"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -418,6 +592,7 @@ export const Constants = {
       log_category: ["mentee_wins", "engagement", "family_liaison"],
       profile_status: ["active", "pending", "inactive"],
       program_type: ["vanguard", "flow"],
+      thread_kind: ["direct", "group"],
     },
   },
 } as const
