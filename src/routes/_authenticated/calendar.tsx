@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useUserContext } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,12 +11,14 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalIcon, Video, Plus, Trash2 } from "lucide-react";
-import { format, isSameDay, isAfter, addMinutes, subMinutes } from "date-fns";
+import { Calendar as CalIcon, Video, Plus, Trash2, Link as LinkIcon, Unlink } from "lucide-react";
+import { format, isAfter, addMinutes, subMinutes } from "date-fns";
 import { toast } from "sonner";
+import { getZoomConnection, getZoomAuthUrl, disconnectZoom, createZoomMeetingForSession } from "@/lib/zoom.functions";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
+  validateSearch: (s: Record<string, unknown>) => ({ zoom: typeof s.zoom === "string" ? s.zoom : undefined }),
 });
 
 function CalendarPage() {
@@ -55,6 +58,9 @@ function CalendarPage() {
         {canEdit && program && <NewSessionDialog program={program} userId={user!.id} />}
       </div>
 
+      {canEdit && <ZoomConnectionCard />}
+
+
       <Card>
         <CardHeader><CardTitle>Upcoming</CardTitle><CardDescription>{upcoming.length} session{upcoming.length === 1 ? "" : "s"}</CardDescription></CardHeader>
         <CardContent className="space-y-3">
@@ -77,6 +83,7 @@ function CalendarPage() {
 
 function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: boolean }) {
   const qc = useQueryClient();
+  const createZoomFn = useServerFn(createZoomMeetingForSession);
   const start = new Date(s.starts_at);
   const end = new Date(s.ends_at);
   const now = new Date();
@@ -89,6 +96,11 @@ function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: b
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sessions"] }); toast.success("Session deleted"); },
     onError: (e: any) => toast.error(e.message),
+  });
+  const createZoom = useMutation({
+    mutationFn: async () => createZoomFn({ data: { sessionId: s.id } }),
+    onSuccess: () => { toast.success("Zoom meeting created"); qc.invalidateQueries({ queryKey: ["sessions"] }); },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   return (
@@ -106,11 +118,15 @@ function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: b
         {s.description && <p className="text-sm mt-1">{s.description}</p>}
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {s.zoom_url && (
-          <Button asChild size="sm" variant={joinable ? "default" : "outline"} disabled={!joinable && !muted ? false : false}>
+        {s.zoom_url ? (
+          <Button asChild size="sm" variant={joinable ? "default" : "outline"}>
             <a href={s.zoom_url} target="_blank" rel="noreferrer">
               <Video className="h-3.5 w-3.5 mr-1" /> {joinable ? "Join now" : "Zoom link"}
             </a>
+          </Button>
+        ) : canEdit && !muted && (
+          <Button size="sm" variant="outline" onClick={() => createZoom.mutate()} disabled={createZoom.isPending}>
+            <Video className="h-3.5 w-3.5 mr-1" /> {createZoom.isPending ? "Creating…" : "Create Zoom"}
           </Button>
         )}
         {canEdit && (
@@ -168,5 +184,59 @@ function NewSessionDialog({ program, userId }: { program: "vanguard" | "flow"; u
         </form>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function ZoomConnectionCard() {
+  const qc = useQueryClient();
+  const getConnFn = useServerFn(getZoomConnection);
+  const getAuthFn = useServerFn(getZoomAuthUrl);
+  const disconnectFn = useServerFn(disconnectZoom);
+  const search = useSearch({ from: "/_authenticated/calendar" });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["zoom-conn"],
+    queryFn: () => (getConnFn as any)({}),
+  });
+
+  useEffect(() => {
+    if (search.zoom === "connected") toast.success("Zoom connected!");
+    else if (search.zoom === "error") toast.error("Zoom connection failed.");
+  }, [search.zoom]);
+
+  const connect = useMutation({
+    mutationFn: async () => (getAuthFn as any)({}),
+    onSuccess: (r: any) => { window.location.href = r.url; },
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const disconnect = useMutation({
+    mutationFn: async () => (disconnectFn as any)({}),
+    onSuccess: () => { toast.success("Zoom disconnected"); qc.invalidateQueries({ queryKey: ["zoom-conn"] }); },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const conn = data?.connection;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5 text-program" /> Zoom integration</CardTitle>
+        <CardDescription>
+          {isLoading ? "Loading…" : conn
+            ? `Connected as ${conn.zoom_email ?? "your Zoom account"}.`
+            : "Connect your Zoom account to auto-create meetings for sessions."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {!conn ? (
+          <Button onClick={() => connect.mutate()} disabled={connect.isPending}>
+            <LinkIcon className="mr-1.5 h-4 w-4" /> {connect.isPending ? "Redirecting…" : "Connect Zoom"}
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>
+            <Unlink className="mr-1.5 h-4 w-4" /> Disconnect Zoom
+          </Button>
+        )}
+      </CardContent>
+    </Card>
   );
 }
