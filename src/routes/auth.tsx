@@ -5,11 +5,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
-import { PROGRAMS } from "@/lib/curriculum";
 import { Shield } from "lucide-react";
 
 const searchSchema = z.object({ program: z.enum(["vanguard", "flow"]).optional() });
@@ -27,7 +24,7 @@ export const Route = createFileRoute("/auth")({
 
 function AuthPage() {
   const navigate = useNavigate();
-  const { program: presetProgram } = Route.useSearch();
+  Route.useSearch();
   const [loading, setLoading] = useState(false);
 
   const handleSignIn = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -44,26 +41,8 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    const form = new FormData(e.currentTarget);
-    const role = String(form.get("role"));
-    const program = String(form.get("program") || "");
-    const fullName = String(form.get("fullName"));
-    const { error } = await supabase.auth.signUp({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { full_name: fullName, role, program: program || null },
-      },
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Account created! Check your email if confirmation is required.");
-    navigate({ to: "/dashboard" });
-  };
+  // Open signup disabled — accounts are created by admins (or parents for their kids).
+
 
   return (
     <div className="min-h-screen bg-background">
@@ -79,58 +58,21 @@ function AuthPage() {
           </div>
 
           <div className="rounded-xl border border-border bg-card p-6 shadow-elegant">
-            <Tabs defaultValue="signin">
-              <TabsList className="grid w-full grid-cols-2">
-                <TabsTrigger value="signin">Sign in</TabsTrigger>
-                <TabsTrigger value="signup">Create account</TabsTrigger>
-              </TabsList>
-
-              <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4 mt-4">
-                  <Field label="Email" name="email" type="email" required />
-                  <Field label="Password" name="password" type="password" required />
-                  <Button disabled={loading} type="submit" className="w-full bg-gradient-gold text-primary-foreground font-semibold">
-                    {loading ? "Signing in..." : "Sign in"}
-                  </Button>
-                </form>
-              </TabsContent>
-
-              <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4 mt-4">
-                  <Field label="Full name" name="fullName" required />
-                  <Field label="Email" name="email" type="email" required />
-                  <Field label="Password" name="password" type="password" required minLength={6} />
-
-                  <div className="space-y-2">
-                    <Label>I am a</Label>
-                    <Select name="role" defaultValue="mentee" required>
-                      <SelectTrigger><SelectValue /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="mentee">Mentee (12–18)</SelectItem>
-                        <SelectItem value="mentor">Mentor</SelectItem>
-                        <SelectItem value="parent">Parent / Family</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">Admins are assigned by the team.</p>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Program</Label>
-                    <Select name="program" defaultValue={presetProgram}>
-                      <SelectTrigger><SelectValue placeholder="Choose program" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="vanguard">{PROGRAMS.vanguard.name}</SelectItem>
-                        <SelectItem value="flow">{PROGRAMS.flow.name}</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <Button disabled={loading} type="submit" className="w-full bg-gradient-gold text-primary-foreground font-semibold">
-                    {loading ? "Creating..." : "Create account"}
-                  </Button>
-                </form>
-              </TabsContent>
-            </Tabs>
+            <form onSubmit={handleSignIn} className="space-y-4">
+              <Field label="Email" name="email" type="email" required />
+              <Field label="Password" name="password" type="password" required />
+              <Button disabled={loading} type="submit" className="w-full bg-gradient-gold text-primary-foreground font-semibold">
+                {loading ? "Signing in..." : "Sign in"}
+              </Button>
+            </form>
+            <div className="mt-6 rounded-lg border border-dashed border-border p-3 text-xs text-muted-foreground">
+              <p className="font-semibold text-foreground">Need an account?</p>
+              <p className="mt-1">
+                Accounts are created by program admins. Contact your coordinator or email{" "}
+                <a className="text-program underline" href="mailto:freebleeders@gmail.com">freebleeders@gmail.com</a> to get set up.
+              </p>
+              <p className="mt-2">Parents: once your account is created, you can add your child from your dashboard.</p>
+            </div>
           </div>
           <p className="text-center text-xs text-muted-foreground mt-6">
             <Link to="/" className="hover:text-foreground">← Back to home</Link>

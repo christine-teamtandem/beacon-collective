@@ -186,6 +186,8 @@ export type Database = {
           full_name: string
           id: string
           last_seen_announcements_at: string | null
+          managed_by_parent: boolean
+          notification_prefs: Json
           program: Database["public"]["Enums"]["program_type"] | null
           status: Database["public"]["Enums"]["profile_status"]
           updated_at: string
@@ -198,6 +200,8 @@ export type Database = {
           full_name?: string
           id: string
           last_seen_announcements_at?: string | null
+          managed_by_parent?: boolean
+          notification_prefs?: Json
           program?: Database["public"]["Enums"]["program_type"] | null
           status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
@@ -210,6 +214,8 @@ export type Database = {
           full_name?: string
           id?: string
           last_seen_announcements_at?: string | null
+          managed_by_parent?: boolean
+          notification_prefs?: Json
           program?: Database["public"]["Enums"]["program_type"] | null
           status?: Database["public"]["Enums"]["profile_status"]
           updated_at?: string
@@ -450,6 +456,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_admin: { Args: { _user_id: string }; Returns: boolean }
       is_thread_member: {
         Args: { _thread_id: string; _user_id: string }
         Returns: boolean

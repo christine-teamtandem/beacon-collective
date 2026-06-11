@@ -7,7 +7,7 @@ import { useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
-  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle,
+  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -21,13 +21,16 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
   ];
   if (role === "admin") {
     return [
+      { label: "Super Admin", items: [
+        { title: "Admin Portal", url: "/admin", icon: ShieldCheck },
+        { title: "Students", url: "/people", icon: Users },
+        { title: "Sponsor Reports", url: "/reports", icon: BarChart3 },
+      ]},
       { label: "Admin", items: [
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "Students", url: "/people", icon: Users },
         { title: "Tracking Logs", url: "/tracking", icon: ClipboardList },
         { title: "Workbook Reviews", url: "/workbook", icon: FileText },
         { title: "Resources", url: "/resources", icon: FolderOpen },
-        { title: "Sponsor Reports", url: "/reports", icon: BarChart3 },
       ]},
       { label: "Communication", items: comms },
       { label: "Curriculum", items: [
@@ -93,7 +96,21 @@ export function AppSidebar() {
             <p className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">{role ?? "member"}</p>
           </div>
         </div>
+        {role === "admin" && (
+          <div className="px-2 pb-2">
+            <p className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Hubs</p>
+            <div className="grid grid-cols-2 gap-1">
+              <Link to="/hub/$program" params={{ program: "vanguard" }} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+                <Shield className="h-3 w-3 text-gold" /> Vanguard
+              </Link>
+              <Link to="/hub/$program" params={{ program: "flow" }} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+                <Heart className="h-3 w-3 text-rose" /> Flow
+              </Link>
+            </div>
+          </div>
+        )}
       </SidebarHeader>
+
 
       <SidebarContent>
         {groups.map((g) => (
