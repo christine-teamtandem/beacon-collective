@@ -44,26 +44,8 @@ function AuthPage() {
     navigate({ to: "/dashboard" });
   };
 
-  const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    setLoading(true);
-    const form = new FormData(e.currentTarget);
-    const role = String(form.get("role"));
-    const program = String(form.get("program") || "");
-    const fullName = String(form.get("fullName"));
-    const { error } = await supabase.auth.signUp({
-      email: String(form.get("email")),
-      password: String(form.get("password")),
-      options: {
-        emailRedirectTo: `${window.location.origin}/dashboard`,
-        data: { full_name: fullName, role, program: program || null },
-      },
-    });
-    setLoading(false);
-    if (error) return toast.error(error.message);
-    toast.success("Account created! Check your email if confirmation is required.");
-    navigate({ to: "/dashboard" });
-  };
+  // Open signup disabled — accounts are created by admins (or parents for their kids).
+
 
   return (
     <div className="min-h-screen bg-background">
