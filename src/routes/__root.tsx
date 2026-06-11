@@ -57,10 +57,16 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Vanguard & Flow — Elite Youth Mentorship" },
       { name: "description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
+      { property: "og:title", content: "Vanguard & Flow — Elite Youth Mentorship" },
+      { name: "twitter:title", content: "Vanguard & Flow — Elite Youth Mentorship" },
+      { property: "og:description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
+      { name: "twitter:description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
+      { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ed200a09-af74-4564-bd8b-568713b6476b" },
+      { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ed200a09-af74-4564-bd8b-568713b6476b" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { property: "og:type", content: "website" },
     ],
     links: [
-      { rel: "icon", type: "image/png", href: "/favicon.png" },
-      { rel: "apple-touch-icon", href: "/favicon.png" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
@@ -94,6 +100,27 @@ function RootComponent() {
     return () => subscription.unsubscribe();
   }, [router, queryClient]);
 
+  // Dev auto-login as superadmin (Lovable preview / local dev only).
+  // This is skipped on the published production domain.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const host = window.location.hostname;
+    const isDev =
+      import.meta.env.DEV ||
+      host === "localhost" ||
+      host === "127.0.0.1" ||
+      host.endsWith(".lovableproject.com") ||
+      host.endsWith(".lovable.dev");
+    if (!isDev) return;
+    (async () => {
+      const { data } = await supabase.auth.getSession();
+      if (data.session) return;
+      await supabase.auth.signInWithPassword({
+        email: "freebleeders@gmail.com",
+        password: "bleeders2026!",
+      });
+    })();
+  }, []);
   return (
     <QueryClientProvider client={queryClient}>
       <Outlet />
