@@ -12,9 +12,9 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Vanguard & Flow — Member Hub for Mentees, Mentors & Families" },
+      { title: "freebleeders mentorship hub — Member Hub for Mentees, Mentors & Families" },
       { name: "description", content: "The private hub for enrolled mentees, mentors, and families of the Vanguard Brotherhood and Flow Collective mentorship programs." },
-      { property: "og:title", content: "Vanguard & Flow — Member Hub" },
+      { property: "og:title", content: "freebleeders mentorship hub — Member Hub" },
       { property: "og:description", content: "Sign in to access your curriculum, weekly tracking, mentor workbook, and family updates." },
     ],
   }),
@@ -144,7 +144,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Vanguard & Flow — Administered by Free Bleeders Inc.
+        © {new Date().getFullYear()} freebleeders mentorship hub — Administered by Free Bleeders Inc.
       </footer>
 
       <DonateModal open={donateOpen} onOpenChange={setDonateOpen} />

@@ -12,12 +12,12 @@ interface Props {
 const TestEmail = ({ recipient, triggeredBy }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Email pipeline test — Vanguard & Flow</Preview>
+    <Preview>Email pipeline test — freebleeders mentorship hub</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Your email pipeline is working ✅</Heading>
         <Text style={text}>
-          This is a test email from <strong>Vanguard &amp; Flow</strong>.
+          This is a test email from <strong>freebleeders mentorship hub</strong>.
           If you received it, sending from <code>notify.mentorship.freebleeders.org</code> is live.
         </Text>
         <Section style={panel}>
@@ -35,7 +35,7 @@ const TestEmail = ({ recipient, triggeredBy }: Props) => (
 
 export const template = {
   component: TestEmail,
-  subject: '[Test] Vanguard & Flow email pipeline',
+  subject: '[Test] freebleeders mentorship hub email pipeline',
   displayName: 'Pipeline test',
   previewData: { recipient: 'admin@example.test', triggeredBy: 'admin@example.test' },
 } satisfies TemplateEntry

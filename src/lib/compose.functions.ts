@@ -260,7 +260,7 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
         payload: {
           message_id: messageId,
           to: r.email,
-          from: "Vanguard & Flow <noreply@mentorship.freebleeders.org>",
+          from: "freebleeders mentorship hub <noreply@mentorship.freebleeders.org>",
           sender_domain: "notify.mentorship.freebleeders.org",
           subject: data.subject,
           html, text,
