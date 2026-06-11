@@ -14,6 +14,7 @@ import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthenticatedWorkbookRouteImport } from './routes/_authenticated/workbook'
 import { Route as AuthenticatedTrackingRouteImport } from './routes/_authenticated/tracking'
+import { Route as AuthenticatedResourcesRouteImport } from './routes/_authenticated/resources'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
@@ -42,6 +43,11 @@ const AuthenticatedWorkbookRoute = AuthenticatedWorkbookRouteImport.update({
 const AuthenticatedTrackingRoute = AuthenticatedTrackingRouteImport.update({
   id: '/tracking',
   path: '/tracking',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedResourcesRoute = AuthenticatedResourcesRouteImport.update({
+  id: '/resources',
+  path: '/resources',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedReportsRoute = AuthenticatedReportsRouteImport.update({
@@ -78,6 +84,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/resources': typeof AuthenticatedResourcesRoute
   '/tracking': typeof AuthenticatedTrackingRoute
   '/workbook': typeof AuthenticatedWorkbookRoute
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
@@ -89,6 +96,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/reports': typeof AuthenticatedReportsRoute
+  '/resources': typeof AuthenticatedResourcesRoute
   '/tracking': typeof AuthenticatedTrackingRoute
   '/workbook': typeof AuthenticatedWorkbookRoute
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
@@ -102,6 +110,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
+  '/_authenticated/resources': typeof AuthenticatedResourcesRoute
   '/_authenticated/tracking': typeof AuthenticatedTrackingRoute
   '/_authenticated/workbook': typeof AuthenticatedWorkbookRoute
   '/_authenticated/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
@@ -115,6 +124,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/people'
     | '/reports'
+    | '/resources'
     | '/tracking'
     | '/workbook'
     | '/curriculum/$week'
@@ -126,6 +136,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/people'
     | '/reports'
+    | '/resources'
     | '/tracking'
     | '/workbook'
     | '/curriculum/$week'
@@ -138,6 +149,7 @@ export interface FileRouteTypes {
     | '/_authenticated/dashboard'
     | '/_authenticated/people'
     | '/_authenticated/reports'
+    | '/_authenticated/resources'
     | '/_authenticated/tracking'
     | '/_authenticated/workbook'
     | '/_authenticated/curriculum/$week'
@@ -184,6 +196,13 @@ declare module '@tanstack/react-router' {
       path: '/tracking'
       fullPath: '/tracking'
       preLoaderRoute: typeof AuthenticatedTrackingRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/resources': {
+      id: '/_authenticated/resources'
+      path: '/resources'
+      fullPath: '/resources'
+      preLoaderRoute: typeof AuthenticatedResourcesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/reports': {
@@ -243,6 +262,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
+  AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
   AuthenticatedTrackingRoute: typeof AuthenticatedTrackingRoute
   AuthenticatedWorkbookRoute: typeof AuthenticatedWorkbookRoute
 }
@@ -252,6 +272,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
+  AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
   AuthenticatedTrackingRoute: AuthenticatedTrackingRoute,
   AuthenticatedWorkbookRoute: AuthenticatedWorkbookRoute,
 }

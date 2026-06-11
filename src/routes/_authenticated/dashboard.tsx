@@ -22,12 +22,10 @@ function Dashboard() {
   return (
     <div className="space-y-8">
       <div>
-        <p className="text-xs uppercase tracking-widest text-gold font-semibold">{role} dashboard</p>
+        <p className="text-xs uppercase tracking-widest text-program font-semibold">{role} dashboard</p>
         <h1 className="font-display text-4xl font-bold mt-1">Welcome back, {fullName.split(" ")[0] || "friend"}.</h1>
         <p className="text-muted-foreground mt-1">
-          {program ? PROGRAMS[program].name : "No program selected yet"}
-          {program && " · "}
-          {program === "vanguard" ? "Vanguard Brotherhood" : program === "flow" ? "Flow Collective" : ""}
+          {program ? PROGRAMS[program].name : role === "mentee" ? "Waiting for program assignment" : "Mentorship Hub"}
         </p>
       </div>
 
@@ -36,13 +34,16 @@ function Dashboard() {
       {role === "admin" && <AdminDashboard />}
       {role === "parent" && <ParentDashboard userId={user.id} />}
       {role === "mentee" && !program && (
-        <Card>
+        <Card className="border-dashed">
           <CardHeader>
-            <CardTitle>Pick your program</CardTitle>
-            <CardDescription>Choose a program to unlock your curriculum.</CardDescription>
+            <CardTitle>Waiting for program assignment</CardTitle>
+            <CardDescription>
+              An admin will assign you to either The Vanguard Brotherhood or The Flow Collective.
+              Once assigned, your dashboard will unlock the curriculum, workbook, and program resources.
+            </CardDescription>
           </CardHeader>
-          <CardContent className="flex gap-3">
-            <Button asChild><Link to="/dashboard">Go to settings</Link></Button>
+          <CardContent>
+            <p className="text-sm text-muted-foreground">Mentor or coordinator? Email <a className="text-program underline" href="mailto:freebleeders@gmail.com">freebleeders@gmail.com</a> to expedite.</p>
           </CardContent>
         </Card>
       )}
