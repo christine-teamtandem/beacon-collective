@@ -176,3 +176,57 @@ function NewSessionDialog({ program, userId }: { program: "vanguard" | "flow"; u
     </Dialog>
   );
 }
+
+function ZoomConnectionCard() {
+  const qc = useQueryClient();
+  const getConnFn = useServerFn(getZoomConnection);
+  const getAuthFn = useServerFn(getZoomAuthUrl);
+  const disconnectFn = useServerFn(disconnectZoom);
+  const search = useSearch({ from: "/_authenticated/calendar" });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["zoom-conn"],
+    queryFn: () => (getConnFn as any)({}),
+  });
+
+  useEffect(() => {
+    if (search.zoom === "connected") toast.success("Zoom connected!");
+    else if (search.zoom === "error") toast.error("Zoom connection failed.");
+  }, [search.zoom]);
+
+  const connect = useMutation({
+    mutationFn: async () => (getAuthFn as any)({}),
+    onSuccess: (r: any) => { window.location.href = r.url; },
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const disconnect = useMutation({
+    mutationFn: async () => (disconnectFn as any)({}),
+    onSuccess: () => { toast.success("Zoom disconnected"); qc.invalidateQueries({ queryKey: ["zoom-conn"] }); },
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  const conn = data?.connection;
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5 text-program" /> Zoom integration</CardTitle>
+        <CardDescription>
+          {isLoading ? "Loading…" : conn
+            ? `Connected as ${conn.zoom_email ?? "your Zoom account"}.`
+            : "Connect your Zoom account to auto-create meetings for sessions."}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="flex flex-wrap gap-2">
+        {!conn ? (
+          <Button onClick={() => connect.mutate()} disabled={connect.isPending}>
+            <LinkIcon className="mr-1.5 h-4 w-4" /> {connect.isPending ? "Redirecting…" : "Connect Zoom"}
+          </Button>
+        ) : (
+          <Button variant="outline" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>
+            <Unlink className="mr-1.5 h-4 w-4" /> Disconnect Zoom
+          </Button>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
