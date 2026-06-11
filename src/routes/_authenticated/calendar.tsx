@@ -1,6 +1,7 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
 import { useUserContext } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -10,9 +11,10 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalIcon, Video, Plus, Trash2 } from "lucide-react";
-import { format, isSameDay, isAfter, addMinutes, subMinutes } from "date-fns";
+import { Calendar as CalIcon, Video, Plus, Trash2, Link as LinkIcon, Unlink } from "lucide-react";
+import { format, isAfter, addMinutes, subMinutes } from "date-fns";
 import { toast } from "sonner";
+import { getZoomConnection, getZoomAuthUrl, disconnectZoom, createZoomMeetingForSession } from "@/lib/zoom.functions";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
