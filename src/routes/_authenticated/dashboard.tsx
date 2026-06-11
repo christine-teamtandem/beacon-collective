@@ -236,40 +236,45 @@ function AdminDashboard() {
 }
 
 function ParentDashboard({ userId }: { userId: string }) {
+  const [addOpen, setAddOpen] = useState(false);
   const { data: children = [] } = useQuery({
-    queryKey: ["parent-children", userId],
+    queryKey: ["my-children", userId],
     queryFn: async () => {
       const { data: links } = await supabase.from("parent_links").select("child_id").eq("parent_id", userId);
       const ids = (links ?? []).map((l) => l.child_id);
       if (!ids.length) return [];
-      const { data: profiles } = await supabase.from("profiles").select("id, full_name, program").in("id", ids);
+      const { data: profiles } = await supabase.from("profiles").select("id, full_name, program, managed_by_parent").in("id", ids);
       return profiles ?? [];
     },
   });
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle>Your children</CardTitle>
-        <CardDescription>Follow their mentorship journey.</CardDescription>
+      <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+        <div>
+          <CardTitle>Your children</CardTitle>
+          <CardDescription>Follow their mentorship journey or add a new child.</CardDescription>
+        </div>
+        <Button onClick={() => setAddOpen(true)}><Plus className="mr-1 h-4 w-4" /> Add child</Button>
       </CardHeader>
       <CardContent>
         {children.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No children linked yet. Ask an admin to link your account.</p>
+          <p className="text-sm text-muted-foreground">No children yet. Click <strong>Add child</strong> to invite them or create a managed profile.</p>
         ) : (
           <ul className="space-y-2">
             {children.map((c) => (
               <li key={c.id} className="flex items-center justify-between p-3 rounded-md border border-border">
                 <div>
                   <p className="font-semibold">{c.full_name}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{c.program}</p>
+                  <p className="text-xs text-muted-foreground capitalize">{c.program ?? "awaiting program"}{c.managed_by_parent ? " · parent-managed" : ""}</p>
                 </div>
-                <Badge variant="outline">{c.program}</Badge>
+                <Badge variant="outline" className="capitalize">{c.program ?? "—"}</Badge>
               </li>
             ))}
           </ul>
         )}
       </CardContent>
+      <AddChildDialog open={addOpen} onOpenChange={setAddOpen} />
     </Card>
   );
 }
