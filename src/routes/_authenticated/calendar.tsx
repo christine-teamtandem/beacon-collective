@@ -58,6 +58,9 @@ function CalendarPage() {
         {canEdit && program && <NewSessionDialog program={program} userId={user!.id} />}
       </div>
 
+      {canEdit && <ZoomConnectionCard />}
+
+
       <Card>
         <CardHeader><CardTitle>Upcoming</CardTitle><CardDescription>{upcoming.length} session{upcoming.length === 1 ? "" : "s"}</CardDescription></CardHeader>
         <CardContent className="space-y-3">
