@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import { useUserContext } from "@/hooks/useSession";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { PROGRAMS, getCurriculum } from "@/lib/curriculum";
-import { BookOpen, Users, ClipboardList, Trophy, ArrowRight, Calendar, Heart, Shield } from "lucide-react";
+import { BookOpen, Users, ClipboardList, Trophy, ArrowRight, Calendar, Heart, Shield, Plus } from "lucide-react";
+import { AddChildDialog } from "@/components/AddChildDialog";
 
 export const Route = createFileRoute("/_authenticated/dashboard")({
   component: Dashboard,
