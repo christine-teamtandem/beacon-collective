@@ -83,6 +83,7 @@ function CalendarPage() {
 
 function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: boolean }) {
   const qc = useQueryClient();
+  const createZoomFn = useServerFn(createZoomMeetingForSession);
   const start = new Date(s.starts_at);
   const end = new Date(s.ends_at);
   const now = new Date();
@@ -95,6 +96,11 @@ function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: b
     },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ["sessions"] }); toast.success("Session deleted"); },
     onError: (e: any) => toast.error(e.message),
+  });
+  const createZoom = useMutation({
+    mutationFn: async () => createZoomFn({ data: { sessionId: s.id } }),
+    onSuccess: () => { toast.success("Zoom meeting created"); qc.invalidateQueries({ queryKey: ["sessions"] }); },
+    onError: (e) => toast.error((e as Error).message),
   });
 
   return (
