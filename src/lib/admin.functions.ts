@@ -25,6 +25,14 @@ async function assertAdmin(supabase: any, userId: string) {
   if (!data) throw new Error("Forbidden: admin only");
 }
 
+function getSiteUrl() {
+  return (
+    process.env.PUBLIC_SITE_URL ||
+    process.env.VITE_PUBLIC_SITE_URL ||
+    "https://mentorship.freebleeders.org"
+  );
+}
+
 export const createAccount = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => AccountInput.parse(d))
@@ -47,8 +55,6 @@ export const createAccount = createServerFn({ method: "POST" })
     if (cErr || !created.user) throw new Error(cErr?.message || "Failed to create user");
     const newId = created.user.id;
 
-    // handle_new_user trigger seeds profiles + user_roles with role from metadata.
-    // Ensure role row matches the requested role (in case trigger defaulted to mentee).
     await supabaseAdmin.from("user_roles").delete().eq("user_id", newId);
     await supabaseAdmin.from("user_roles").insert({ user_id: newId, role: data.role });
 
@@ -87,4 +93,144 @@ export const deleteAccount = createServerFn({ method: "POST" })
     const { error } = await supabaseAdmin.auth.admin.deleteUser(data.userId);
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+const UserIdInput = z.object({ userId: z.string().uuid() });
+
+export const sendPasswordReset = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => UserIdInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: u, error: gErr } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    if (gErr || !u.user?.email) throw new Error(gErr?.message || "User not found");
+    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(u.user.email, {
+      redirectTo: `${getSiteUrl()}/auth?reset=1`,
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, email: u.user.email };
+  });
+
+export const unlockAccount = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => UserIdInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { error } = await supabaseAdmin.auth.admin.updateUserById(data.userId, {
+      ban_duration: "none",
+    } as any);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+export const resendLoginEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => UserIdInput.parse(d))
+  .handler(async ({ data, context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: u, error: gErr } = await supabaseAdmin.auth.admin.getUserById(data.userId);
+    if (gErr || !u.user?.email) throw new Error(gErr?.message || "User not found");
+    // Generate magiclink — Supabase fires the auth hook → branded email
+    const { error } = await supabaseAdmin.auth.admin.generateLink({
+      type: "magiclink",
+      email: u.user.email,
+      options: { redirectTo: `${getSiteUrl()}/dashboard` },
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, email: u.user.email };
+  });
+
+export const sendTestEmail = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: u } = await supabaseAdmin.auth.admin.getUserById(context.userId);
+    const email = u?.user?.email;
+    if (!email) throw new Error("No email on file for current admin.");
+
+    const messageId = `test-${context.userId}-${Date.now()}`;
+    // Render via the public send route would require JWT; we shortcut by
+    // enqueuing through the registry-rendered HTML directly.
+    const { render } = await import("@react-email/components");
+    const React = await import("react");
+    const { TEMPLATES } = await import("@/lib/email-templates/registry");
+    const entry = TEMPLATES["test-email"];
+    const element = React.createElement(entry.component, {
+      recipient: email,
+      triggeredBy: email,
+    });
+    const html = await render(element);
+    const text = await render(element, { plainText: true });
+
+    await supabaseAdmin.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: "test-email",
+      recipient_email: email,
+      status: "pending",
+    });
+
+    const { error } = await supabaseAdmin.rpc("enqueue_email", {
+      queue_name: "transactional_emails",
+      payload: {
+        message_id: messageId,
+        to: email,
+        from: "Vanguard & Flow <noreply@mentorship.freebleeders.org>",
+        sender_domain: "notify.mentorship.freebleeders.org",
+        subject: "[Test] Vanguard & Flow email pipeline",
+        html,
+        text,
+        purpose: "transactional",
+        label: "test-email",
+        idempotency_key: messageId,
+        queued_at: new Date().toISOString(),
+      },
+    });
+    if (error) throw new Error(error.message);
+    return { ok: true, email, messageId };
+  });
+
+export const hubSmokeTest = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+    const checks: Array<{ name: string; ok: boolean; detail: string }> = [];
+
+    const tableCount = async (t: string) => {
+      const { count, error } = await (supabaseAdmin as any)
+        .from(t)
+        .select("*", { count: "exact", head: true });
+      return { count: (count as number) ?? 0, error: (error as { message?: string } | null)?.message };
+    };
+
+    for (const t of ["profiles", "user_roles", "mentor_assignments", "parent_links", "sessions"]) {
+      const { count, error } = await tableCount(t);
+      checks.push({ name: `Table ${t}`, ok: !error, detail: error ?? `${count} rows` });
+    }
+
+    // pgmq queues (via read with batch_size 0 won't work; just probe via rpc on small batch)
+    const probeQueue = async (q: string) => {
+      const { error } = await supabaseAdmin.rpc("read_email_batch", {
+        queue_name: q, batch_size: 0, vt: 1,
+      });
+      return error?.message;
+    };
+    for (const q of ["auth_emails", "transactional_emails"]) {
+      const err = await probeQueue(q);
+      checks.push({ name: `Queue ${q}`, ok: !err, detail: err ?? "reachable" });
+    }
+
+    // Recent email log
+    const { data: logs } = await supabaseAdmin
+      .from("email_send_log")
+      .select("template_name, recipient_email, status, created_at, error_message")
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    return { checks, recentEmails: logs ?? [] };
   });

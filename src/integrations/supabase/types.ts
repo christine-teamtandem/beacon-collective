@@ -367,6 +367,8 @@ export type Database = {
           starts_at: string
           title: string
           updated_at: string
+          zoom_meeting_id: string | null
+          zoom_start_url: string | null
           zoom_url: string | null
         }
         Insert: {
@@ -381,6 +383,8 @@ export type Database = {
           starts_at: string
           title: string
           updated_at?: string
+          zoom_meeting_id?: string | null
+          zoom_start_url?: string | null
           zoom_url?: string | null
         }
         Update: {
@@ -395,6 +399,8 @@ export type Database = {
           starts_at?: string
           title?: string
           updated_at?: string
+          zoom_meeting_id?: string | null
+          zoom_start_url?: string | null
           zoom_url?: string | null
         }
         Relationships: []
@@ -540,6 +546,60 @@ export type Database = {
           mentor_id?: string
           updated_at?: string
           week_number?: number
+        }
+        Relationships: []
+      }
+      zoom_connections: {
+        Row: {
+          access_token: string
+          created_at: string
+          expires_at: string
+          refresh_token: string
+          scope: string | null
+          updated_at: string
+          user_id: string
+          zoom_email: string | null
+          zoom_user_id: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string
+          expires_at: string
+          refresh_token: string
+          scope?: string | null
+          updated_at?: string
+          user_id: string
+          zoom_email?: string | null
+          zoom_user_id?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string
+          expires_at?: string
+          refresh_token?: string
+          scope?: string | null
+          updated_at?: string
+          user_id?: string
+          zoom_email?: string | null
+          zoom_user_id?: string | null
+        }
+        Relationships: []
+      }
+      zoom_oauth_states: {
+        Row: {
+          created_at: string
+          state: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          state: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          state?: string
+          user_id?: string
         }
         Relationships: []
       }

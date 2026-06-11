@@ -4,16 +4,18 @@ import { useUserContext } from "@/hooks/useSession";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { deleteAccount } from "@/lib/admin.functions";
+import { deleteAccount, sendPasswordReset, unlockAccount, resendLoginEmail, sendTestEmail, hubSmokeTest } from "@/lib/admin.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CreateAccountDialog } from "@/components/CreateAccountDialog";
 import { toast } from "sonner";
 import {
   UserPlus, Users, Shield, Heart, Trash2, Search, ShieldCheck, GraduationCap, UserCog, Baby,
+  MoreVertical, KeyRound, Unlock, Mail, Activity, RefreshCw, CheckCircle2, XCircle,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -56,10 +58,12 @@ function AdminPortal() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
           <TabsTrigger value="quick-links">Shortcuts</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4"><Overview /></TabsContent>
         <TabsContent value="accounts" className="mt-4"><Accounts /></TabsContent>
+        <TabsContent value="diagnostics" className="mt-4"><Diagnostics /></TabsContent>
         <TabsContent value="quick-links" className="mt-4"><Shortcuts /></TabsContent>
       </Tabs>
 
@@ -127,6 +131,9 @@ function Overview() {
 function Accounts() {
   const qc = useQueryClient();
   const delFn = useServerFn(deleteAccount);
+  const resetFn = useServerFn(sendPasswordReset);
+  const unlockFn = useServerFn(unlockAccount);
+  const resendFn = useServerFn(resendLoginEmail);
   const { data: accounts = [] } = useAllAccounts();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
@@ -140,6 +147,21 @@ function Accounts() {
   const del = useMutation({
     mutationFn: async (userId: string) => delFn({ data: { userId } }),
     onSuccess: () => { toast.success("Account deleted."); qc.invalidateQueries({ queryKey: ["all-accounts"] }); },
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const reset = useMutation({
+    mutationFn: async (userId: string) => resetFn({ data: { userId } }),
+    onSuccess: (r: any) => toast.success(`Password reset email sent to ${r.email}`),
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const unlock = useMutation({
+    mutationFn: async (userId: string) => unlockFn({ data: { userId } }),
+    onSuccess: () => toast.success("Account unlocked."),
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const resend = useMutation({
+    mutationFn: async (userId: string) => resendFn({ data: { userId } }),
+    onSuccess: (r: any) => toast.success(`Login link sent to ${r.email}`),
     onError: (e) => toast.error((e as Error).message),
   });
 
@@ -177,16 +199,29 @@ function Accounts() {
                 <Badge variant="outline" className="capitalize">{a.status}</Badge>
               </div>
             </div>
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => {
-                if (confirm(`Delete ${a.full_name}? This cannot be undone.`)) del.mutate(a.id);
-              }}
-              aria-label="Delete account"
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button size="icon" variant="ghost" aria-label="Account actions"><MoreVertical className="h-4 w-4" /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => reset.mutate(a.id)}>
+                  <KeyRound className="mr-2 h-4 w-4" /> Send password reset
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => resend.mutate(a.id)}>
+                  <Mail className="mr-2 h-4 w-4" /> Resend login link
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => unlock.mutate(a.id)}>
+                  <Unlock className="mr-2 h-4 w-4" /> Unlock account
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  className="text-destructive focus:text-destructive"
+                  onClick={() => { if (confirm(`Delete ${a.full_name}? This cannot be undone.`)) del.mutate(a.id); }}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" /> Delete account
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ))}
       </CardContent>
@@ -215,6 +250,74 @@ function Shortcuts() {
           <p className="mt-1 text-xs text-muted-foreground">{l.href}</p>
         </Link>
       ))}
+    </div>
+  );
+}
+
+function Diagnostics() {
+  const testFn = useServerFn(sendTestEmail);
+  const smokeFn = useServerFn(hubSmokeTest);
+  const test = useMutation({
+    mutationFn: async () => (testFn as any)({}),
+    onSuccess: (r: any) => toast.success(`Test email queued to ${r.email}. Check your inbox in ~1 min.`),
+    onError: (e) => toast.error((e as Error).message),
+  });
+  const smoke = useMutation({
+    mutationFn: async () => (smokeFn as any)({}),
+    onError: (e) => toast.error((e as Error).message),
+  });
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-program" /> Hub diagnostics</CardTitle>
+          <CardDescription>Verify email pipeline and core tables are healthy.</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap gap-2">
+          <Button onClick={() => test.mutate()} disabled={test.isPending}>
+            <Mail className="mr-1.5 h-4 w-4" /> {test.isPending ? "Sending..." : "Send test email to me"}
+          </Button>
+          <Button variant="outline" onClick={() => smoke.mutate()} disabled={smoke.isPending}>
+            <RefreshCw className={`mr-1.5 h-4 w-4 ${smoke.isPending ? "animate-spin" : ""}`} /> Run hub smoke test
+          </Button>
+        </CardContent>
+      </Card>
+
+      {smoke.data && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Checks</CardTitle>
+            <CardDescription>{(smoke.data as any).checks.filter((c: any) => c.ok).length}/{(smoke.data as any).checks.length} passing</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-1.5">
+            {(smoke.data as any).checks.map((c: any) => (
+              <div key={c.name} className="flex items-center gap-2 rounded border border-border p-2 text-sm">
+                {c.ok ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />}
+                <span className="font-medium">{c.name}</span>
+                <span className="text-xs text-muted-foreground ml-auto">{c.detail}</span>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
+
+      {smoke.data && (smoke.data as any).recentEmails?.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle>Recent emails</CardTitle></CardHeader>
+          <CardContent className="space-y-1.5">
+            {(smoke.data as any).recentEmails.map((e: any, i: number) => (
+              <div key={i} className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm">
+                <Badge variant="outline" className="capitalize">{e.status}</Badge>
+                <span className="font-mono text-xs">{e.template_name}</span>
+                <span className="truncate text-xs text-muted-foreground">{e.recipient_email}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground">{new Date(e.created_at).toLocaleString()}</span>
+                {e.error_message && <p className="w-full text-xs text-destructive">{e.error_message}</p>}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }

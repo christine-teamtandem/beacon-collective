@@ -7,7 +7,7 @@ import { useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
-  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck,
+  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck, Mail,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -18,6 +18,7 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
     { title: "Calendar", url: "/calendar", icon: Calendar },
     { title: "Announcements", url: "/announcements", icon: Megaphone },
     { title: "Messages", url: "/messages", icon: MessageCircle },
+    { title: "Compose email", url: "/compose", icon: Mail },
   ];
   if (role === "admin") {
     return [
