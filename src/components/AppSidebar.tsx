@@ -96,7 +96,21 @@ export function AppSidebar() {
             <p className="truncate text-[10px] uppercase tracking-wider text-muted-foreground">{role ?? "member"}</p>
           </div>
         </div>
+        {role === "admin" && (
+          <div className="px-2 pb-2">
+            <p className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Hubs</p>
+            <div className="grid grid-cols-2 gap-1">
+              <Link to="/hub/$program" params={{ program: "vanguard" }} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+                <Shield className="h-3 w-3 text-gold" /> Vanguard
+              </Link>
+              <Link to="/hub/$program" params={{ program: "flow" }} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+                <Heart className="h-3 w-3 text-rose" /> Flow
+              </Link>
+            </div>
+          </div>
+        )}
       </SidebarHeader>
+
 
       <SidebarContent>
         {groups.map((g) => (
