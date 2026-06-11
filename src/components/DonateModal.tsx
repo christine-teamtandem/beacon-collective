@@ -33,7 +33,7 @@ export function DonateModal({ open, onOpenChange }: { open: boolean; onOpenChang
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Support the mission</DialogTitle>
           <DialogDescription>
-            Your gift sponsors mentorship, retreats, and rewards for young people in the Vanguard & Flow programs.
+            Your gift sponsors mentorship, retreats, and rewards for young people in the freebleeders mentorship hub programs.
           </DialogDescription>
         </DialogHeader>
         <div ref={mountRef} className="mt-4 min-h-[400px]" />

@@ -178,9 +178,9 @@ export const sendTestEmail = createServerFn({ method: "POST" })
       payload: {
         message_id: messageId,
         to: email,
-        from: "Vanguard & Flow <noreply@mentorship.freebleeders.org>",
+        from: "freebleeders mentorship hub <noreply@mentorship.freebleeders.org>",
         sender_domain: "notify.mentorship.freebleeders.org",
-        subject: "[Test] Vanguard & Flow email pipeline",
+        subject: "[Test] freebleeders mentorship hub email pipeline",
         html,
         text,
         purpose: "transactional",

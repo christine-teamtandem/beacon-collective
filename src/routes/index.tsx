@@ -144,7 +144,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Vanguard & Flow — Administered by Free Bleeders Inc.
+        © {new Date().getFullYear()} freebleeders mentorship hub — Administered by Free Bleeders Inc.
       </footer>
 
       <DonateModal open={donateOpen} onOpenChange={setDonateOpen} />

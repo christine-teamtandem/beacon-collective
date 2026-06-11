@@ -15,7 +15,7 @@ export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Sign in — Vanguard & Flow" },
+      { title: "Sign in — freebleeders mentorship hub" },
       { name: "description", content: "Sign in or create your mentorship account." },
     ],
   }),
