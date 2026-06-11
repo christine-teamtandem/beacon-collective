@@ -262,6 +262,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bucket_program: {
+        Args: { _bucket: string }
+        Returns: Database["public"]["Enums"]["program_type"]
+      }
       get_user_program: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["program_type"]
