@@ -10,6 +10,9 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, CheckCircle2, Circle } from "lucide-react";
+import { WeekMaterials } from "@/components/WeekMaterials";
+
+
 
 export const Route = createFileRoute("/_authenticated/curriculum/$week")({
   component: WeekDetail,
@@ -93,6 +96,8 @@ function WeekDetail() {
           </ul>
         </CardContent>
       </Card>
+
+      <WeekMaterials program={program} week={weekNum} />
 
       {isMentee && (
         <Card>
