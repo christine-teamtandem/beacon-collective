@@ -97,6 +97,8 @@ function WeekDetail() {
         </CardContent>
       </Card>
 
+      <WeekMaterials program={program} week={weekNum} />
+
       {isMentee && (
         <Card>
           <CardHeader>
