@@ -324,3 +324,17 @@ function Diagnostics() {
     </div>
   );
 }
+
+function PreviewAs() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Eye className="h-5 w-5 text-program" /> Preview as another role</CardTitle>
+        <CardDescription>See exactly what mentors, mentees, or parents see. A banner stays at the top so you can exit anytime.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ViewAsPicker />
+      </CardContent>
+    </Card>
+  );
+}
