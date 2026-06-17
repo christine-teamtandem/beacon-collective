@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Circle, ChevronRight } from "lucide-react";
 
-export const Route = createFileRoute("/_authenticated/curriculum")({
+export const Route = createFileRoute("/_authenticated/curriculum/")({
   component: CurriculumIndex,
 });
 
