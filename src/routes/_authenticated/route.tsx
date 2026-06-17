@@ -7,6 +7,7 @@ import { Heart, Shield } from "lucide-react";
 import { useState } from "react";
 import { DonateModal } from "@/components/DonateModal";
 import { Button } from "@/components/ui/button";
+import { ViewAsBar } from "@/components/ViewAsBar";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -43,6 +44,7 @@ function AuthenticatedLayout() {
                 </Button>
               </div>
             </header>
+            <ViewAsBar />
             <main className="mx-auto w-full max-w-7xl px-4 py-6 sm:px-6">
               <Outlet />
             </main>
