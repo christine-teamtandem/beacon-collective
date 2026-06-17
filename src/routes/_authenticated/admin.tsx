@@ -12,10 +12,11 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { CreateAccountDialog } from "@/components/CreateAccountDialog";
+import { ViewAsPicker } from "@/components/ViewAsBar";
 import { toast } from "sonner";
 import {
   UserPlus, Users, Shield, Heart, Trash2, Search, ShieldCheck, GraduationCap, UserCog, Baby,
-  MoreVertical, KeyRound, Unlock, Mail, Activity, RefreshCw, CheckCircle2, XCircle,
+  MoreVertical, KeyRound, Unlock, Mail, Activity, RefreshCw, CheckCircle2, XCircle, Eye,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -25,11 +26,11 @@ export const Route = createFileRoute("/_authenticated/admin")({
 type Role = "admin" | "mentor" | "mentee" | "parent";
 
 function AdminPortal() {
-  const { role } = useUserContext();
+  const { realRole } = useUserContext();
   const [createOpen, setCreateOpen] = useState(false);
   const [defaultRole, setDefaultRole] = useState<Role>("mentee");
 
-  if (role && role !== "admin") {
+  if (realRole && realRole !== "admin") {
     return <p className="text-sm text-muted-foreground">Admin only.</p>;
   }
 
@@ -58,11 +59,13 @@ function AdminPortal() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="preview">Preview as</TabsTrigger>
           <TabsTrigger value="diagnostics">Diagnostics</TabsTrigger>
           <TabsTrigger value="quick-links">Shortcuts</TabsTrigger>
         </TabsList>
         <TabsContent value="overview" className="mt-4"><Overview /></TabsContent>
         <TabsContent value="accounts" className="mt-4"><Accounts /></TabsContent>
+        <TabsContent value="preview" className="mt-4"><PreviewAs /></TabsContent>
         <TabsContent value="diagnostics" className="mt-4"><Diagnostics /></TabsContent>
         <TabsContent value="quick-links" className="mt-4"><Shortcuts /></TabsContent>
       </Tabs>
@@ -319,5 +322,19 @@ function Diagnostics() {
         </Card>
       )}
     </div>
+  );
+}
+
+function PreviewAs() {
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2"><Eye className="h-5 w-5 text-program" /> Preview as another role</CardTitle>
+        <CardDescription>See exactly what mentors, mentees, or parents see. A banner stays at the top so you can exit anytime.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <ViewAsPicker />
+      </CardContent>
+    </Card>
   );
 }
