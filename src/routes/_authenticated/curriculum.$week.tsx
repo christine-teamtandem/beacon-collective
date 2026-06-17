@@ -11,6 +11,7 @@ import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { ArrowLeft, ArrowRight, CheckCircle2, Circle } from "lucide-react";
 import { WeekMaterials } from "@/components/WeekMaterials";
+import { WeekLessons } from "@/components/WeekLessons";
 
 
 
@@ -96,6 +97,8 @@ function WeekDetail() {
           </ul>
         </CardContent>
       </Card>
+
+      <WeekLessons program={program} week={weekNum} />
 
       <WeekMaterials program={program} week={weekNum} />
 

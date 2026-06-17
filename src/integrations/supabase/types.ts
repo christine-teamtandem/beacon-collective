@@ -483,6 +483,42 @@ export type Database = {
         }
         Relationships: []
       }
+      week_lessons: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          position: number
+          program: Database["public"]["Enums"]["program_type"]
+          title: string
+          updated_at: string
+          week_number: number
+        }
+        Insert: {
+          author_id: string
+          body?: string
+          created_at?: string
+          id?: string
+          position?: number
+          program: Database["public"]["Enums"]["program_type"]
+          title: string
+          updated_at?: string
+          week_number: number
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          position?: number
+          program?: Database["public"]["Enums"]["program_type"]
+          title?: string
+          updated_at?: string
+          week_number?: number
+        }
+        Relationships: []
+      }
       weekly_progress: {
         Row: {
           completed: boolean
