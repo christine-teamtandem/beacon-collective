@@ -368,6 +368,7 @@ export type Database = {
           title: string
           updated_at: string
           zoom_meeting_id: string | null
+          zoom_passcode: string | null
           zoom_start_url: string | null
           zoom_url: string | null
         }
@@ -384,6 +385,7 @@ export type Database = {
           title: string
           updated_at?: string
           zoom_meeting_id?: string | null
+          zoom_passcode?: string | null
           zoom_start_url?: string | null
           zoom_url?: string | null
         }
@@ -400,6 +402,7 @@ export type Database = {
           title?: string
           updated_at?: string
           zoom_meeting_id?: string | null
+          zoom_passcode?: string | null
           zoom_start_url?: string | null
           zoom_url?: string | null
         }
@@ -518,6 +521,35 @@ export type Database = {
           week_number?: number
         }
         Relationships: []
+      }
+      weekly_checkin_sends: {
+        Row: {
+          created_at: string
+          sent_for_week: string
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          sent_for_week: string
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          sent_for_week?: string
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weekly_checkin_sends_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "sessions"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       weekly_progress: {
         Row: {

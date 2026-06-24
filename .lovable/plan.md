@@ -1,97 +1,87 @@
+
 ## Goal
 
-Create a single `README.md` at the project root that serves as a complete status report of the Beacon Collective / Freebleeders Mentorship app — features, architecture, schema, integrations, known issues, and recommended next steps.
+Send a branded weekly Zoom check-in email to every mentee (and a mentor variant with the host start URL) for sessions happening in the upcoming week. Delivery must complete every Saturday morning before 12:00 noon, using the existing `pgmq` + `process-email-queue` pipeline.
 
-## Deliverable
+## 1. Email template
 
-One file: `README.md` (overwrites the current one if present).
+New file: `src/lib/email-templates/weekly-zoom-checkin.tsx`
 
-## Outline of the README
+- React Email component, deep crimson + gold on light card / black text, matching the existing premium tone (no Lorem Ipsum, English copy).
+- Props (all passed via `templateData`):
+  - `recipientName`, `recipientRole` (`"mentee" | "mentor"`)
+  - `mentorName`, `menteeName` (mentee variant shows mentor; mentor variant shows mentee/cohort)
+  - `programLabel` (`Vanguard Brotherhood` / `Flow Collective`)
+  - `sessionTitle`, `startsAtIso`, `endsAtIso`, `timezoneLabel`
+  - `joinUrl`, `meetingId`, `passcode?`, `startUrl?` (mentor-only)
+- Renders date/time formatted server-side (passed in pre-formatted) plus a prominent "Join Zoom" CTA. Mentor variant adds a "Start meeting (host)" secondary CTA and the passcode block.
+- Subject: `Weekly check-in: {sessionTitle} — {weekdayDate}`.
+- Register in `src/lib/email-templates/registry.ts` under key `weekly-zoom-checkin`.
 
-1. **Project overview** — Beacon Collective mentorship platform for two programs (Vanguard Brotherhood — young men 12–18; Flow Collective — young women 12–18 with bleeding disorders).
+## 2. Schema additions (migration)
 
-2. **Tech stack**
-   - Frontend: React 19 + TypeScript (strict), TanStack Router/Start v1, TanStack Query v5, Tailwind CSS v4, shadcn/Radix UI, Lucide icons, Sonner, Recharts, date-fns, react-hook-form + Zod.
-   - Backend: TanStack Start server functions (`createServerFn`) + a few public `/api/public/*` routes (Zoom OAuth callback, email webhooks/queue/unsubscribe).
-   - Data/auth/storage: Lovable Cloud (Supabase) — Postgres + RLS, Auth, Storage buckets `resources-vanguard` / `resources-flow`, pgmq email queue.
-   - Build/deploy: Vite 7, Cloudflare Worker runtime (nodejs_compat). Published at `mentorship.freebleeders.org`.
+- Add `zoom_passcode text` to `public.sessions` so the template can show it (Zoom create call already returns it — we'll persist it going forward; existing rows simply render without passcode).
+- Update `src/lib/zoom.functions.ts` (`createZoomMeetingForSession`) to store `password` from the Zoom API response into `zoom_passcode`.
+- Add idempotency table `public.weekly_checkin_sends (session_id uuid, user_id uuid, sent_for_week date, primary key (session_id, user_id, sent_for_week))` with grants + RLS (service role only) so re-runs never double-send.
 
-3. **Feature status — what works today**
-   - Auth: email/password + Google OAuth via Lovable broker; role auto-assigned via `handle_new_user` trigger (default `mentee`).
-   - Role model: `admin`, `mentor`, `mentee`, `parent` in `user_roles` with `has_role` / `is_admin` / `get_user_role` security-definer functions.
-   - Admin **View-as** preview (admin can preview mentor/mentee/parent + program) via `ViewAsBar`/`useUserContext`.
-   - Dashboard, People directory, Announcements, Calendar/Sessions, Compose & Messages (1:1 + program group threads auto-provisioned by `ensure_program_group_membership` / `ensure_direct_thread`), Reports, Resources (per-program private storage buckets), Tracking logs, Workbook entries, Parent linking, Admin console.
-   - Curriculum: program hub (`hub.$program.tsx`) + 12-week curriculum list + per-week page with:
-     - `WeekLessons` — admins/mentors author lesson/module/topic notes; mentees read.
-     - `WeekMaterials` — per-week file/video assets (PDF, video links, etc.).
-   - Zoom integration: OAuth connect/disconnect, token refresh, create scheduled meeting per session, stores join/start URL on `sessions` row.
-   - Transactional email pipeline: Resend-style templates (`test-email`, `composed-message`, auth emails), `/lovable/email/*` routes for send/preview/queue/suppression/unsubscribe, pgmq queue helpers (`enqueue_email`, `read_email_batch`, `delete_email`, `move_to_dlq`).
+## 3. Server route that builds + enqueues the batch
 
-4. **File structure (key paths)**
-   - `src/routes/__root.tsx` — shell, head meta, auth state listener.
-   - `src/routes/_authenticated/route.tsx` — managed `ssr:false` auth gate.
-   - `src/routes/_authenticated/*.tsx` — feature pages listed above.
-   - `src/routes/api/public/zoom/callback.ts` — Zoom OAuth return.
-   - `src/routes/lovable/email/*` — email send/preview/queue/webhook/suppression/unsubscribe.
-   - `src/components/` — `AppHeader`, `AppSidebar`, `ViewAsBar`, `WeekLessons`, `WeekMaterials`, `AddChildDialog`, `CreateAccountDialog`, `DonateModal`, `ui/*`.
-   - `src/lib/` — `curriculum.ts` (program metadata + 12-week topic data), `admin.functions.ts`, `parent.functions.ts`, `compose.functions.ts`, `zoom.functions.ts`, `email/send.ts`, `email-templates/*`.
-   - `src/hooks/useSession.ts` — session + role + program + view-as.
-   - `src/integrations/supabase/*` — auto-generated clients and middleware.
+New public hook: `src/routes/api/public/hooks/weekly-zoom-checkin.ts` (POST).
 
-5. **Database schema (public tables, all RLS-enabled)**
-   Document each with purpose, key columns and relationships:
-   - `profiles` (id → auth.users, full_name, program, …)
-   - `user_roles` (user_id, role enum: admin/mentor/mentee/parent)
-   - `mentor_assignments` (mentor_id, mentee_id) — triggers direct chat thread.
-   - `parent_links` (parent_id, child_id)
-   - `chat_threads`, `chat_thread_members`, `chat_messages` (kind: direct/group; program group auto-membership).
-   - `announcements`
-   - `sessions` (title, starts_at/ends_at, zoom_url, zoom_meeting_id, zoom_start_url, created_by)
-   - `resources` (program-scoped pointers to storage objects)
-   - `tracking_logs`
-   - `workbook_entries`
-   - `weekly_progress`
-   - `week_lessons` (program, week_number, title, body, author_id, position) — RLS: read for admins + program-matched users + mentors of program mentees; write for author or admin.
-   - `zoom_connections` / `zoom_oauth_states`
-   - `email_send_log`, `email_send_state`, `email_unsubscribe_tokens`, `suppressed_emails`
-   - Security-definer helpers: `has_role`, `is_admin`, `get_user_role`, `get_user_program`, `is_thread_member`, `bucket_program`.
-   - Triggers: `handle_new_user` (auth.users), `ensure_program_group_membership` (profiles), `ensure_direct_thread` (mentor_assignments), `touch_updated_at` on timestamped tables.
-   - Storage buckets: `resources-vanguard`, `resources-flow` (private).
+- Auth: require `apikey` header equal to the project anon key (canonical cron pattern); reject otherwise.
+- Uses `supabaseAdmin` (service role) inside the handler.
+- Query:
+  - Select `sessions` where `starts_at` is between `now()` and `now() + interval '7 days'` and `zoom_url is not null`.
+  - For each session resolve recipients:
+    - Mentor → `profiles` row for `mentor_id` (+ email via `auth.admin.getUserById`).
+    - Mentees → for direct sessions (no `cohort`) use `mentor_assignments` where `mentor_id = session.mentor_id`; for program/cohort sessions use all `profiles` with matching `program` (and `cohort` when set) and role `mentee` via `user_roles`.
+  - Skip pairs already present in `weekly_checkin_sends` for the current ISO week.
+- For each recipient:
+  1. Pre-render with `render()` from `@react-email/components` against `weekly-zoom-checkin`.
+  2. Insert a `pending` row into `email_send_log` (message_id = uuid).
+  3. Call `supabase.rpc('enqueue_email', { queue_name: 'transactional_emails', payload: { message_id, template_name, recipient_email, subject, html, from, ... } })` using the exact payload shape the existing `/lovable/email/queue/process` worker consumes (mirror what `/lovable/email/transactional/send` enqueues).
+  4. Insert into `weekly_checkin_sends`.
+- Returns `{ queued, skipped, errors }` JSON for observability.
 
-6. **Integrations & external APIs**
-   - Lovable Cloud (Supabase) — DB, Auth, Storage.
-   - Lovable AI Gateway — `LOVABLE_API_KEY` present (not yet consumed by a feature).
-   - Zoom OAuth — `ZOOM_CLIENT_ID` / `ZOOM_CLIENT_SECRET` configured; callback at `/api/public/zoom/callback`.
-   - Lovable email (Resend-backed) — auth templates, transactional send, suppression, unsubscribe.
-   - Google OAuth via Lovable broker.
+This reuses the existing transactional queue, suppression checks, retries, and DLQ logic — no new sender code.
 
-7. **Pending tasks / TODOs / in-progress**
-   - Flow program advertises 24 weekly circles but `curriculum.ts` only ships the foundational 12 weeks — extend to 24 or document as intentional.
-   - Lovable AI key is provisioned but not yet wired to any feature (good candidate: AI-assisted lesson drafting or mentor coaching prompts).
-   - No automated tests in repo.
-   - No analytics/observability surfaces beyond Reports page.
-   - `DonateModal` exists but donations are not wired to a payment provider (Stripe/Paddle not enabled).
+## 4. Saturday-morning schedule (pg_cron)
 
-8. **Known bugs / architectural limitations**
-   - Curriculum sidebar link does not navigate when already inside `/curriculum/$week`; users must use the "Back to curriculum" button (UX papercut).
-   - Mobile-first polish for `AppSidebar` and dialogs is uneven across the protected routes.
-   - Cloudflare Worker runtime: no `child_process`, `sharp`, etc. — any future PDF/image processing must be edge-safe or moved to a background job.
-   - Email pipeline depends on pgmq; DLQ handling exists but no admin UI to inspect failures.
-   - Realtime chat updates rely on query invalidation, not Supabase realtime subscriptions — messages page may feel slow under load.
-   - Zoom token refresh assumes `refresh_token` rotation; if Zoom revokes mid-session the user sees a raw error toast.
+Applied via `supabase--insert` (not a migration — contains project URL + anon key):
 
-9. **Recommended next features (prioritized)**
-   1. Wire Lovable AI to draft week lessons and summarize tracking logs for mentors.
-   2. Add Supabase realtime to `chat_messages` for live messaging + unread counts in sidebar.
-   3. Mentee progress dashboard tying `weekly_progress` + `workbook_entries` + `tracking_logs` into one parent/mentor view.
-   4. Calendar invites (.ics) and email reminders for upcoming `sessions` using existing email pipeline.
-   5. Admin email-queue/DLQ inspector page.
-   6. Expand Flow curriculum to the full 24-week arc.
-   7. Optional Stripe/Paddle hook-up for `DonateModal`.
+```sql
+select cron.schedule(
+  'weekly-zoom-checkin-enqueue',
+  '0 1 * * 6',  -- Saturday 01:00 UTC = 09:00 Asia/Manila, well before noon
+  $$
+  select net.http_post(
+    url := 'https://project--2963ad52-8cbb-43f1-b67a-1b16a33439a8.lovable.app/api/public/hooks/weekly-zoom-checkin',
+    headers := '{"Content-Type":"application/json","apikey":"<anon>"}'::jsonb,
+    body := '{}'::jsonb
+  );
+  $$
+);
+```
 
-10. **How to run / deploy** — `bun install`, `bun run dev`, environment variables already provisioned by Lovable Cloud; published URL noted.
+The existing `process-email-queue` cron already drains `transactional_emails` every 5 seconds, so the whole batch finishes within minutes — comfortably before 12:00 noon. If a different timezone is desired we can adjust the cron expression.
 
-## Notes
+## 5. Admin trigger (optional but cheap)
 
-- Markdown only, no code execution required.
-- Will not modify any feature code in this step.
+Add a "Send weekly Zoom check-ins now" button on `/admin` that hits the same hook with the anon key (admin-only UI), so admins can run/re-run the batch on demand without waiting for Saturday.
+
+## Technical notes
+
+- All times rendered into the email are computed server-side using `date-fns` `format` with `Asia/Manila` (configurable constant) so the email shows the user-facing local time, while DB stays UTC.
+- Cohort detection: `cohort is null` ⇒ direct pair; otherwise treat as program/cohort group session.
+- Idempotency: `(session_id, recipient_user_id, sent_for_week)` uniqueness + suppression list check inside `process-email-queue` already prevents duplicate sends.
+- No file attachments, no marketing copy — strictly transactional weekly notice.
+- The hook is on `/api/public/*` so the published worker bypasses auth at the edge; security comes from the `apikey` check inside the handler.
+
+## Deliverables checklist
+
+1. `src/lib/email-templates/weekly-zoom-checkin.tsx` + registry entry.
+2. Migration: add `sessions.zoom_passcode`, create `weekly_checkin_sends` table with grants/RLS.
+3. Update `zoom.functions.ts` to persist `password` on meeting create.
+4. New route `src/routes/api/public/hooks/weekly-zoom-checkin.ts`.
+5. `cron.schedule` insert for Saturday 01:00 UTC.
+6. Admin "Run now" button on `/admin`.
