@@ -3,6 +3,7 @@ import { render } from '@react-email/components'
 import { createFileRoute } from '@tanstack/react-router'
 import { createClient } from '@supabase/supabase-js'
 import { TEMPLATES } from '@/lib/email-templates/registry'
+import { buildCalendarLinks } from '@/lib/calendar-links'
 
 const SITE_NAME = 'Freebleeders Mentorship Hub'
 const SENDER_DOMAIN = 'notify.mentorship.freebleeders.org'
