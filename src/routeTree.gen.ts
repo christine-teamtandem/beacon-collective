@@ -35,6 +35,7 @@ import { Route as LovableEmailQueueProcessRouteImport } from './routes/lovable/e
 import { Route as LovableEmailAuthWebhookRouteImport } from './routes/lovable/email/auth/webhook'
 import { Route as LovableEmailAuthPreviewRouteImport } from './routes/lovable/email/auth/preview'
 import { Route as ApiPublicZoomCallbackRouteImport } from './routes/api/public/zoom/callback'
+import { Route as ApiPublicHooksWeeklyZoomCheckinRouteImport } from './routes/api/public/hooks/weekly-zoom-checkin'
 
 const UnsubscribeRoute = UnsubscribeRouteImport.update({
   id: '/unsubscribe',
@@ -171,6 +172,12 @@ const ApiPublicZoomCallbackRoute = ApiPublicZoomCallbackRouteImport.update({
   path: '/api/public/zoom/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicHooksWeeklyZoomCheckinRoute =
+  ApiPublicHooksWeeklyZoomCheckinRouteImport.update({
+    id: '/api/public/hooks/weekly-zoom-checkin',
+    path: '/api/public/hooks/weekly-zoom-checkin',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -192,6 +199,7 @@ export interface FileRoutesByFullPath {
   '/hub/$program': typeof AuthenticatedHubProgramRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/curriculum/': typeof AuthenticatedCurriculumIndexRoute
+  '/api/public/hooks/weekly-zoom-checkin': typeof ApiPublicHooksWeeklyZoomCheckinRoute
   '/api/public/zoom/callback': typeof ApiPublicZoomCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -219,6 +227,7 @@ export interface FileRoutesByTo {
   '/hub/$program': typeof AuthenticatedHubProgramRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/curriculum': typeof AuthenticatedCurriculumIndexRoute
+  '/api/public/hooks/weekly-zoom-checkin': typeof ApiPublicHooksWeeklyZoomCheckinRoute
   '/api/public/zoom/callback': typeof ApiPublicZoomCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -248,6 +257,7 @@ export interface FileRoutesById {
   '/_authenticated/hub/$program': typeof AuthenticatedHubProgramRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/curriculum/': typeof AuthenticatedCurriculumIndexRoute
+  '/api/public/hooks/weekly-zoom-checkin': typeof ApiPublicHooksWeeklyZoomCheckinRoute
   '/api/public/zoom/callback': typeof ApiPublicZoomCallbackRoute
   '/lovable/email/auth/preview': typeof LovableEmailAuthPreviewRoute
   '/lovable/email/auth/webhook': typeof LovableEmailAuthWebhookRoute
@@ -277,6 +287,7 @@ export interface FileRouteTypes {
     | '/hub/$program'
     | '/lovable/email/suppression'
     | '/curriculum/'
+    | '/api/public/hooks/weekly-zoom-checkin'
     | '/api/public/zoom/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -304,6 +315,7 @@ export interface FileRouteTypes {
     | '/hub/$program'
     | '/lovable/email/suppression'
     | '/curriculum'
+    | '/api/public/hooks/weekly-zoom-checkin'
     | '/api/public/zoom/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -332,6 +344,7 @@ export interface FileRouteTypes {
     | '/_authenticated/hub/$program'
     | '/lovable/email/suppression'
     | '/_authenticated/curriculum/'
+    | '/api/public/hooks/weekly-zoom-checkin'
     | '/api/public/zoom/callback'
     | '/lovable/email/auth/preview'
     | '/lovable/email/auth/webhook'
@@ -347,6 +360,7 @@ export interface RootRouteChildren {
   UnsubscribeRoute: typeof UnsubscribeRoute
   EmailUnsubscribeRoute: typeof EmailUnsubscribeRoute
   LovableEmailSuppressionRoute: typeof LovableEmailSuppressionRoute
+  ApiPublicHooksWeeklyZoomCheckinRoute: typeof ApiPublicHooksWeeklyZoomCheckinRoute
   ApiPublicZoomCallbackRoute: typeof ApiPublicZoomCallbackRoute
   LovableEmailAuthPreviewRoute: typeof LovableEmailAuthPreviewRoute
   LovableEmailAuthWebhookRoute: typeof LovableEmailAuthWebhookRoute
@@ -539,6 +553,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicZoomCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/hooks/weekly-zoom-checkin': {
+      id: '/api/public/hooks/weekly-zoom-checkin'
+      path: '/api/public/hooks/weekly-zoom-checkin'
+      fullPath: '/api/public/hooks/weekly-zoom-checkin'
+      preLoaderRoute: typeof ApiPublicHooksWeeklyZoomCheckinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -586,6 +607,7 @@ const rootRouteChildren: RootRouteChildren = {
   UnsubscribeRoute: UnsubscribeRoute,
   EmailUnsubscribeRoute: EmailUnsubscribeRoute,
   LovableEmailSuppressionRoute: LovableEmailSuppressionRoute,
+  ApiPublicHooksWeeklyZoomCheckinRoute: ApiPublicHooksWeeklyZoomCheckinRoute,
   ApiPublicZoomCallbackRoute: ApiPublicZoomCallbackRoute,
   LovableEmailAuthPreviewRoute: LovableEmailAuthPreviewRoute,
   LovableEmailAuthWebhookRoute: LovableEmailAuthWebhookRoute,
