@@ -199,10 +199,13 @@ export const Route = createFileRoute('/api/public/hooks/weekly-zoom-checkin')({
               sessionTitle: s.title,
               whenLabel: formatWhen(s.starts_at),
               timezoneLabel: TIMEZONE_LABEL,
-              joinUrl: s.zoom_url ?? undefined,
-              meetingId: s.zoom_meeting_id ?? undefined,
-              passcode: s.zoom_passcode ?? undefined,
-              startUrl: role === 'mentor' ? (s.zoom_start_url ?? undefined) : undefined,
+              joinUrl: zoom.zoom_url,
+              meetingId: zoom.zoom_meeting_id ?? undefined,
+              passcode: zoom.zoom_passcode ?? undefined,
+              startUrl: role === 'mentor' ? (zoom.zoom_start_url ?? undefined) : undefined,
+              googleCalUrl: calLinks.google,
+              outlookCalUrl: calLinks.outlook,
+              yahooCalUrl: calLinks.yahoo,
             }
 
             const element = React.createElement(template.component, templateData)
