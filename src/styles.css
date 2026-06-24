@@ -34,8 +34,17 @@
   --color-rose-foreground: var(--rose-foreground);
   --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
   --font-display: 'Playfair Display', Georgia, serif;
 }
+
 
 :root {
   --radius: 0.5rem;
@@ -77,7 +86,18 @@
   --border: oklch(0.32 0.04 265);
   --input: oklch(0.28 0.04 265);
   --ring: oklch(0.78 0.12 85);
+
+  /* Sidebar — solid deep navy, distinct from main bg */
+  --sidebar: oklch(0.13 0.04 265);
+  --sidebar-foreground: oklch(0.97 0.01 90);
+  --sidebar-primary: oklch(0.78 0.12 85);
+  --sidebar-primary-foreground: oklch(0.16 0.04 265);
+  --sidebar-accent: oklch(0.24 0.05 265);
+  --sidebar-accent-foreground: oklch(0.97 0.01 90);
+  --sidebar-border: oklch(0.30 0.04 265);
+  --sidebar-ring: oklch(0.78 0.12 85);
 }
+
 
 /* Flow program: swap accent from gold to rose */
 .flow-theme {

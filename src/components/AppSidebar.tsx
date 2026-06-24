@@ -1,8 +1,9 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar,
 } from "@/components/ui/sidebar";
+
 import { useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -97,7 +98,10 @@ export function AppSidebar() {
   const { role, program, fullName, user } = useUserContext();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isMobile, setOpenMobile } = useSidebar();
   const groups = itemsFor(role, program);
+
+  const closeMobile = () => { if (isMobile) setOpenMobile(false); };
 
   const programLabel = program === "vanguard" ? "Vanguard Brotherhood" : program === "flow" ? "Flow Collective" : role === "admin" ? "Admin Console" : "Awaiting assignment";
   const ProgramIcon = program === "flow" ? Heart : Shield;
@@ -106,6 +110,7 @@ export function AppSidebar() {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   };
+
 
   return (
     <Sidebar collapsible="icon">
@@ -123,12 +128,13 @@ export function AppSidebar() {
           <div className="px-2 pb-2">
             <p className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Hubs</p>
             <div className="grid grid-cols-2 gap-1">
-              <Link to="/hub/$program" params={{ program: "vanguard" }} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+              <Link to="/hub/$program" params={{ program: "vanguard" }} onClick={closeMobile} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
                 <Shield className="h-3 w-3 text-gold" /> Vanguard
               </Link>
-              <Link to="/hub/$program" params={{ program: "flow" }} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+              <Link to="/hub/$program" params={{ program: "flow" }} onClick={closeMobile} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
                 <Heart className="h-3 w-3 text-rose" /> Flow
               </Link>
+
             </div>
           </div>
         )}
@@ -146,10 +152,11 @@ export function AppSidebar() {
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active}>
-                        <Link to={item.url} className="flex items-center gap-2">
+                        <Link to={item.url} onClick={closeMobile} className="flex items-center gap-2">
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                         </Link>
+
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
