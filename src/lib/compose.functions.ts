@@ -275,3 +275,48 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
 
     return { sent: results.filter((r) => r.ok).length, total: results.length, results };
   });
+
+export const listSentEmails = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data, error } = await supabaseAdmin
+      .from("email_send_log")
+      .select("message_id, recipient_email, status, template_name, created_at, error_message")
+      .like("message_id", `compose-${context.userId}-%`)
+      .order("created_at", { ascending: false })
+      .limit(200);
+    if (error) throw new Error(error.message);
+
+    // Group by send-batch stamp embedded in message_id: compose-<uid>-<stamp>-<rid>
+    const groups = new Map<string, { stamp: string; createdAt: string; rows: typeof data }>();
+    (data ?? []).forEach((row) => {
+      const parts = row.message_id.split("-");
+      // userId is a UUID with 4 dashes — take everything after the last two segments
+      const rid = parts.slice(-5).join("-"); // recipient uuid
+      const stamp = parts[parts.length - 6] ?? "0";
+      void rid;
+      const g = groups.get(stamp) ?? { stamp, createdAt: row.created_at, rows: [] as any };
+      g.rows.push(row);
+      if (row.created_at < g.createdAt) g.createdAt = row.created_at;
+      groups.set(stamp, g);
+    });
+
+    const batches = Array.from(groups.values())
+      .map((g) => ({
+        stamp: g.stamp,
+        createdAt: g.createdAt,
+        total: g.rows.length,
+        sent: g.rows.filter((r: any) => r.status === "sent").length,
+        pending: g.rows.filter((r: any) => r.status === "pending").length,
+        failed: g.rows.filter((r: any) => r.status === "failed" || r.status === "dlq").length,
+        recipients: g.rows.map((r: any) => ({
+          email: r.recipient_email,
+          status: r.status,
+          error: r.error_message,
+        })),
+      }))
+      .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
+
+    return { batches };
+  });
