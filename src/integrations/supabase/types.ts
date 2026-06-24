@@ -266,11 +266,18 @@ export type Database = {
       }
       profiles: {
         Row: {
+          address: string | null
           age: number | null
           avatar_url: string | null
           bio: string | null
+          birthday: string | null
           created_at: string
+          email: string | null
+          favorites: string | null
           full_name: string
+          fun_facts: string | null
+          goals: string | null
+          hobbies: string[] | null
           id: string
           last_seen_announcements_at: string | null
           managed_by_parent: boolean
@@ -280,11 +287,18 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          address?: string | null
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
+          birthday?: string | null
           created_at?: string
+          email?: string | null
+          favorites?: string | null
           full_name?: string
+          fun_facts?: string | null
+          goals?: string | null
+          hobbies?: string[] | null
           id: string
           last_seen_announcements_at?: string | null
           managed_by_parent?: boolean
@@ -294,11 +308,18 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          address?: string | null
           age?: number | null
           avatar_url?: string | null
           bio?: string | null
+          birthday?: string | null
           created_at?: string
+          email?: string | null
+          favorites?: string | null
           full_name?: string
+          fun_facts?: string | null
+          goals?: string | null
+          hobbies?: string[] | null
           id?: string
           last_seen_announcements_at?: string | null
           managed_by_parent?: boolean
@@ -688,6 +709,7 @@ export type Database = {
         Args: { payload: Json; queue_name: string }
         Returns: number
       }
+      get_profile_address: { Args: { _profile_id: string }; Returns: string }
       get_user_program: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["program_type"]
