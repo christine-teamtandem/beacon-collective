@@ -7,19 +7,15 @@ import { useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
-  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck, Mail,
+  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck, Mail, UserCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
 
+const profileItem: Item = { title: "My Profile", url: "/profile", icon: UserCircle2 };
+
 function itemsFor(role: AppRole | null, _program: Program | null): { label: string; items: Item[] }[] {
-  const comms: Item[] = [
-    { title: "Calendar", url: "/calendar", icon: Calendar },
-    { title: "Announcements", url: "/announcements", icon: Megaphone },
-    { title: "Messages", url: "/messages", icon: MessageCircle },
-    { title: "Compose email", url: "/compose", icon: Mail },
-  ];
   if (role === "admin") {
     return [
       { label: "Super Admin", items: [
@@ -33,43 +29,69 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
         { title: "Workbook Reviews", url: "/workbook", icon: FileText },
         { title: "Resources", url: "/resources", icon: FolderOpen },
       ]},
-      { label: "Communication", items: comms },
+      { label: "Communication", items: [
+        { title: "Calendar", url: "/calendar", icon: Calendar },
+        { title: "Announcements", url: "/announcements", icon: Megaphone },
+        { title: "Messages", url: "/messages", icon: MessageCircle },
+        { title: "Compose email", url: "/compose", icon: Mail },
+      ]},
       { label: "Curriculum", items: [
         { title: "12-Week Curriculum", url: "/curriculum", icon: Shield },
       ]},
+      { label: "Account", items: [profileItem] },
     ];
   }
   if (role === "mentor") {
     return [
       { label: "Mentor", items: [
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "My Mentees", url: "/tracking", icon: Users },
-        { title: "Workbook", url: "/workbook", icon: FileText },
-        { title: "Curriculum", url: "/curriculum", icon: BookOpen },
+        { title: "Tracking Logs", url: "/tracking", icon: ClipboardList },
         { title: "Resources", url: "/resources", icon: FolderOpen },
       ]},
-      { label: "Communication", items: comms },
+      { label: "Communication", items: [
+        { title: "Calendar", url: "/calendar", icon: Calendar },
+        { title: "Announcements", url: "/announcements", icon: Megaphone },
+        { title: "Messages", url: "/messages", icon: MessageCircle },
+        { title: "Compose email", url: "/compose", icon: Mail },
+      ]},
+      { label: "Curriculum", items: [
+        { title: "12-Week Curriculum", url: "/curriculum", icon: BookOpen },
+      ]},
+      { label: "Account", items: [profileItem] },
     ];
   }
   if (role === "parent") {
     return [
       { label: "Family", items: [
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "Resources", url: "/resources", icon: FolderOpen },
       ]},
-      { label: "Communication", items: comms },
+      { label: "Communication", items: [
+        { title: "Calendar", url: "/calendar", icon: Calendar },
+        { title: "Announcements", url: "/announcements", icon: Megaphone },
+        { title: "Messages", url: "/messages", icon: MessageCircle },
+      ]},
+      { label: "Account", items: [profileItem] },
     ];
   }
+  // mentee
   return [
     { label: "My Hub", items: [
       { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "Curriculum", url: "/curriculum", icon: BookOpen },
       { title: "My Workbook", url: "/workbook", icon: FileText },
       { title: "Resources", url: "/resources", icon: FolderOpen },
     ]},
-    { label: "Communication", items: comms },
+    { label: "Communication", items: [
+      { title: "Calendar", url: "/calendar", icon: Calendar },
+      { title: "Announcements", url: "/announcements", icon: Megaphone },
+      { title: "Messages", url: "/messages", icon: MessageCircle },
+    ]},
+    { label: "Curriculum", items: [
+      { title: "12-Week Curriculum", url: "/curriculum", icon: BookOpen },
+    ]},
+    { label: "Account", items: [profileItem] },
   ];
 }
+
 
 export function AppSidebar() {
   const { role, program, fullName, user } = useUserContext();
