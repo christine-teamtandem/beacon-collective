@@ -291,11 +291,9 @@ export const listSentEmails = createServerFn({ method: "POST" })
     // Group by send-batch stamp embedded in message_id: compose-<uid>-<stamp>-<rid>
     const groups = new Map<string, { stamp: string; createdAt: string; rows: typeof data }>();
     (data ?? []).forEach((row) => {
+      if (!row.message_id) return;
       const parts = row.message_id.split("-");
-      // userId is a UUID with 4 dashes — take everything after the last two segments
-      const rid = parts.slice(-5).join("-"); // recipient uuid
       const stamp = parts[parts.length - 6] ?? "0";
-      void rid;
       const g = groups.get(stamp) ?? { stamp, createdAt: row.created_at, rows: [] as any };
       g.rows.push(row);
       if (row.created_at < g.createdAt) g.createdAt = row.created_at;
