@@ -17,6 +17,9 @@ interface Props {
   meetingId?: string
   passcode?: string
   startUrl?: string
+  googleCalUrl?: string
+  outlookCalUrl?: string
+  yahooCalUrl?: string
 }
 
 const WeeklyZoomCheckIn = ({
