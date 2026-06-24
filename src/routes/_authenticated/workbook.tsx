@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useUserContext } from "@/hooks/useSession";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,11 +10,14 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { getCurriculum, type Program } from "@/lib/curriculum";
+import { Sparkles } from "lucide-react";
+import { getCurriculum, PROGRAMS, type Program } from "@/lib/curriculum";
+import { draftWorkbook } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/workbook")({
   component: Workbook,
 });
+
 
 function Workbook() {
   const { user, role } = useUserContext();
