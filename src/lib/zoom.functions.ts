@@ -139,6 +139,7 @@ export const createZoomMeetingForSession = createServerFn({ method: "POST" })
         zoom_url: meeting.join_url,
         zoom_meeting_id: String(meeting.id),
         zoom_start_url: meeting.start_url,
+        zoom_passcode: meeting.password ?? null,
       })
       .eq("id", session.id);
 
