@@ -81,6 +81,25 @@ const WeeklyZoomCheckIn = ({
             )}
           </Section>
 
+          {(googleCalUrl || outlookCalUrl || yahooCalUrl) && (
+            <Section style={calWrap}>
+              <Text style={calLabel}>Add to your calendar</Text>
+              <Text style={calRow}>
+                {googleCalUrl && (
+                  <Link href={googleCalUrl} style={calLink}>Google</Link>
+                )}
+                {googleCalUrl && outlookCalUrl && <span style={calSep}>·</span>}
+                {outlookCalUrl && (
+                  <Link href={outlookCalUrl} style={calLink}>Outlook</Link>
+                )}
+                {(googleCalUrl || outlookCalUrl) && yahooCalUrl && <span style={calSep}>·</span>}
+                {yahooCalUrl && (
+                  <Link href={yahooCalUrl} style={calLink}>Yahoo</Link>
+                )}
+              </Text>
+            </Section>
+          )}
+
           {isMentor && startUrl && (
             <>
               <Hr style={hr} />
