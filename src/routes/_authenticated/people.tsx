@@ -291,15 +291,35 @@ function FamiliesTab() {
   const menteeList = profiles.filter((p) => p.roles.includes("mentee"));
   const nameOf = (id: string) => profiles.find((p) => p.id === id)?.full_name ?? id.slice(0, 8);
 
+  const alreadyLinked = useMemo(
+    () => !!parent && !!child && links.some((l) => l.parent_id === parent && l.child_id === child),
+    [parent, child, links],
+  );
+
   const linkM = useMutation({
     mutationFn: async () => { const { error } = await supabase.from("parent_links").insert({ parent_id: parent, child_id: child }); if (error) throw error; },
     onSuccess: () => { toast.success("Linked."); setParent(""); setChild(""); qc.invalidateQueries({ queryKey: ["all-parent-links"] }); },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => {
+      if (isDuplicateError(e)) {
+        toast.error("This family link already exists.");
+        qc.invalidateQueries({ queryKey: ["all-parent-links"] });
+      } else {
+        toast.error((e as Error).message);
+      }
+    },
   });
   const unlink = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("parent_links").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Unlinked."); qc.invalidateQueries({ queryKey: ["all-parent-links"] }); },
   });
+
+  const handleLink = () => {
+    if (alreadyLinked) {
+      toast.error("This family link already exists.");
+      return;
+    }
+    linkM.mutate();
+  };
 
   return (
     <Card>
@@ -318,8 +338,15 @@ function FamiliesTab() {
               <SelectContent>{menteeList.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="flex items-end"><Button onClick={() => linkM.mutate()} disabled={!parent || !child}>Link</Button></div>
+          <div className="flex items-end">
+            <Button onClick={handleLink} disabled={!parent || !child || alreadyLinked || linkM.isPending}>
+              {alreadyLinked ? "Already linked" : "Link"}
+            </Button>
+          </div>
         </div>
+        {alreadyLinked && (
+          <p className="text-xs text-destructive">This parent and child are already linked.</p>
+        )}
         <div className="space-y-1.5">
           {links.length === 0 && <p className="text-xs text-muted-foreground">No family links yet.</p>}
           {links.map((l) => (
