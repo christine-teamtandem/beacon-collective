@@ -126,6 +126,30 @@ export const Route = createFileRoute('/api/public/hooks/weekly-zoom-checkin')({
             : { data: null as { full_name: string | null } | null }
           const mentorName = mentorProfile?.full_name || 'Your Mentor'
 
+          // Ensure a Zoom meeting exists for this session (creates one via
+          // mentor's Zoom OAuth connection, refreshing token if needed).
+          const { ensureZoomMeetingForSession } = await import('@/lib/zoom.server')
+          const zoom = await ensureZoomMeetingForSession(s as any)
+          if (!zoom?.zoom_url) {
+            errors.push(`${s.id}: no Zoom meeting (mentor not connected?)`)
+            skipped += recipients.size
+            continue
+          }
+
+          // Universal calendar links — built once per session, shared by all recipients.
+          const calendarDescription =
+            `${s.description ? s.description + '\n\n' : ''}` +
+            `Join Zoom: ${zoom.zoom_url}` +
+            (zoom.zoom_meeting_id ? `\nMeeting ID: ${zoom.zoom_meeting_id}` : '') +
+            (zoom.zoom_passcode ? `\nPasscode: ${zoom.zoom_passcode}` : '')
+          const calLinks = buildCalendarLinks({
+            title: `Beacon Collective Weekly Check-in: ${s.title}`,
+            description: calendarDescription,
+            location: zoom.zoom_url,
+            startsAt: s.starts_at,
+            endsAt: s.ends_at,
+          })
+
           for (const [userId, role] of recipients) {
             // Idempotency check
             const { data: already } = await supabase
