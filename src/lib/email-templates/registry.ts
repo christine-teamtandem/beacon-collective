@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react'
 import { template as testEmail } from './test-email'
 import { template as composedMessage } from './composed-message'
+import { template as weeklyZoomCheckin } from './weekly-zoom-checkin'
 
 export interface TemplateEntry {
   component: ComponentType<any>
@@ -14,4 +15,5 @@ export interface TemplateEntry {
 export const TEMPLATES: Record<string, TemplateEntry> = {
   'test-email': testEmail,
   'composed-message': composedMessage,
+  'weekly-zoom-checkin': weeklyZoomCheckin,
 }

@@ -284,6 +284,7 @@ function Diagnostics() {
           <Button variant="outline" onClick={() => smoke.mutate()} disabled={smoke.isPending}>
             <RefreshCw className={`mr-1.5 h-4 w-4 ${smoke.isPending ? "animate-spin" : ""}`} /> Run hub smoke test
           </Button>
+          <RunWeeklyCheckinButton />
         </CardContent>
       </Card>
 
@@ -322,6 +323,30 @@ function Diagnostics() {
         </Card>
       )}
     </div>
+  );
+}
+
+function RunWeeklyCheckinButton() {
+  const run = useMutation({
+    mutationFn: async () => {
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
+      const res = await fetch("/api/public/hooks/weekly-zoom-checkin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", apikey: anonKey },
+        body: "{}",
+      });
+      if (!res.ok) throw new Error(`Failed (${res.status})`);
+      return res.json();
+    },
+    onSuccess: (r: any) =>
+      toast.success(`Weekly check-ins queued: ${r.queued} sent, ${r.skipped} skipped`),
+    onError: (e) => toast.error((e as Error).message),
+  });
+  return (
+    <Button variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
+      <Mail className={`mr-1.5 h-4 w-4 ${run.isPending ? "animate-pulse" : ""}`} />
+      {run.isPending ? "Queuing..." : "Run weekly Zoom check-ins now"}
+    </Button>
   );
 }
 
