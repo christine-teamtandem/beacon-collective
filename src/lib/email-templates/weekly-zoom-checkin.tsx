@@ -17,12 +17,16 @@ interface Props {
   meetingId?: string
   passcode?: string
   startUrl?: string
+  googleCalUrl?: string
+  outlookCalUrl?: string
+  yahooCalUrl?: string
 }
 
 const WeeklyZoomCheckIn = ({
   recipientName, recipientRole = 'mentee', mentorName, menteeName, programLabel,
   sessionTitle = 'Weekly Mentorship Check-in', whenLabel, timezoneLabel,
   joinUrl, meetingId, passcode, startUrl,
+  googleCalUrl, outlookCalUrl, yahooCalUrl,
 }: Props) => {
   const isMentor = recipientRole === 'mentor'
   return (
@@ -76,6 +80,25 @@ const WeeklyZoomCheckIn = ({
               </Text>
             )}
           </Section>
+
+          {(googleCalUrl || outlookCalUrl || yahooCalUrl) && (
+            <Section style={calWrap}>
+              <Text style={calLabel}>Add to your calendar</Text>
+              <Text style={calRow}>
+                {googleCalUrl && (
+                  <Link href={googleCalUrl} style={calLink}>Google</Link>
+                )}
+                {googleCalUrl && outlookCalUrl && <span style={calSep}>·</span>}
+                {outlookCalUrl && (
+                  <Link href={outlookCalUrl} style={calLink}>Outlook</Link>
+                )}
+                {(googleCalUrl || outlookCalUrl) && yahooCalUrl && <span style={calSep}>·</span>}
+                {yahooCalUrl && (
+                  <Link href={yahooCalUrl} style={calLink}>Yahoo</Link>
+                )}
+              </Text>
+            </Section>
+          )}
 
           {isMentor && startUrl && (
             <>
@@ -181,3 +204,11 @@ const hostHeading = {
 }
 const hr = { borderTop: '1px solid #2a2a2a', margin: '24px 0 14px' }
 const footer = { fontSize: '11px', color: '#78716c', margin: 0, lineHeight: '1.6' }
+const calWrap = { textAlign: 'center' as const, margin: '16px 0 6px' }
+const calLabel = {
+  fontSize: '10px', color: '#c9a14a', letterSpacing: '0.22em',
+  textTransform: 'uppercase' as const, margin: '0 0 6px', fontWeight: 700 as const,
+}
+const calRow = { fontSize: '13px', color: '#d6d3d1', margin: 0 }
+const calLink = { color: '#f5f5f4', textDecoration: 'none', fontWeight: 600 as const, padding: '0 6px' }
+const calSep = { color: '#52525b' }

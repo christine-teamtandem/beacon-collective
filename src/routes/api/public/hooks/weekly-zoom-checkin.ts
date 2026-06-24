@@ -3,6 +3,7 @@ import { render } from '@react-email/components'
 import { createFileRoute } from '@tanstack/react-router'
 import { createClient } from '@supabase/supabase-js'
 import { TEMPLATES } from '@/lib/email-templates/registry'
+import { buildCalendarLinks } from '@/lib/calendar-links'
 
 const SITE_NAME = 'Freebleeders Mentorship Hub'
 const SENDER_DOMAIN = 'notify.mentorship.freebleeders.org'
@@ -71,10 +72,9 @@ export const Route = createFileRoute('/api/public/hooks/weekly-zoom-checkin')({
 
         const { data: sessions, error: sErr } = await supabase
           .from('sessions')
-          .select('id, program, cohort, mentor_id, title, starts_at, ends_at, zoom_url, zoom_meeting_id, zoom_passcode, zoom_start_url')
+          .select('id, program, cohort, mentor_id, title, description, starts_at, ends_at, zoom_url, zoom_meeting_id, zoom_passcode, zoom_start_url')
           .gte('starts_at', now.toISOString())
           .lte('starts_at', horizon.toISOString())
-          .not('zoom_url', 'is', null)
 
         if (sErr) {
           console.error('weekly-zoom-checkin: sessions fetch failed', sErr)
@@ -126,6 +126,30 @@ export const Route = createFileRoute('/api/public/hooks/weekly-zoom-checkin')({
             : { data: null as { full_name: string | null } | null }
           const mentorName = mentorProfile?.full_name || 'Your Mentor'
 
+          // Ensure a Zoom meeting exists for this session (creates one via
+          // mentor's Zoom OAuth connection, refreshing token if needed).
+          const { ensureZoomMeetingForSession } = await import('@/lib/zoom.server')
+          const zoom = await ensureZoomMeetingForSession(s as any)
+          if (!zoom?.zoom_url) {
+            errors.push(`${s.id}: no Zoom meeting (mentor not connected?)`)
+            skipped += recipients.size
+            continue
+          }
+
+          // Universal calendar links — built once per session, shared by all recipients.
+          const calendarDescription =
+            `${s.description ? s.description + '\n\n' : ''}` +
+            `Join Zoom: ${zoom.zoom_url}` +
+            (zoom.zoom_meeting_id ? `\nMeeting ID: ${zoom.zoom_meeting_id}` : '') +
+            (zoom.zoom_passcode ? `\nPasscode: ${zoom.zoom_passcode}` : '')
+          const calLinks = buildCalendarLinks({
+            title: `Beacon Collective Weekly Check-in: ${s.title}`,
+            description: calendarDescription,
+            location: zoom.zoom_url,
+            startsAt: s.starts_at,
+            endsAt: s.ends_at,
+          })
+
           for (const [userId, role] of recipients) {
             // Idempotency check
             const { data: already } = await supabase
@@ -175,10 +199,13 @@ export const Route = createFileRoute('/api/public/hooks/weekly-zoom-checkin')({
               sessionTitle: s.title,
               whenLabel: formatWhen(s.starts_at),
               timezoneLabel: TIMEZONE_LABEL,
-              joinUrl: s.zoom_url ?? undefined,
-              meetingId: s.zoom_meeting_id ?? undefined,
-              passcode: s.zoom_passcode ?? undefined,
-              startUrl: role === 'mentor' ? (s.zoom_start_url ?? undefined) : undefined,
+              joinUrl: zoom.zoom_url,
+              meetingId: zoom.zoom_meeting_id ?? undefined,
+              passcode: zoom.zoom_passcode ?? undefined,
+              startUrl: role === 'mentor' ? (zoom.zoom_start_url ?? undefined) : undefined,
+              googleCalUrl: calLinks.google,
+              outlookCalUrl: calLinks.outlook,
+              yahooCalUrl: calLinks.yahoo,
             }
 
             const element = React.createElement(template.component, templateData)
