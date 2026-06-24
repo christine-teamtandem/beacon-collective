@@ -284,6 +284,7 @@ function Diagnostics() {
           <Button variant="outline" onClick={() => smoke.mutate()} disabled={smoke.isPending}>
             <RefreshCw className={`mr-1.5 h-4 w-4 ${smoke.isPending ? "animate-spin" : ""}`} /> Run hub smoke test
           </Button>
+          <RunWeeklyCheckinButton />
         </CardContent>
       </Card>
 
