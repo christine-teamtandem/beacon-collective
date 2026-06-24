@@ -57,6 +57,12 @@ function Workbook() {
     if (isAdmin) setMenteeId("");
   }, [viewProgram, isAdmin]);
 
+  const currentMentee = mentees.find((m) => m.id === menteeId);
+  const program: Program = (currentMentee?.program as Program) ?? (viewProgram as Program) ?? "vanguard";
+  const curriculum = getCurriculum(program);
+
+
+
 
   const { data: entry } = useQuery({
     queryKey: ["workbook-entry", user?.id, menteeId, week],
