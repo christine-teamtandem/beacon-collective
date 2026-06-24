@@ -26,6 +26,7 @@ const WeeklyZoomCheckIn = ({
   recipientName, recipientRole = 'mentee', mentorName, menteeName, programLabel,
   sessionTitle = 'Weekly Mentorship Check-in', whenLabel, timezoneLabel,
   joinUrl, meetingId, passcode, startUrl,
+  googleCalUrl, outlookCalUrl, yahooCalUrl,
 }: Props) => {
   const isMentor = recipientRole === 'mentor'
   return (
