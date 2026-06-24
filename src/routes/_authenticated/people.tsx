@@ -181,6 +181,12 @@ function StudentsTab() {
   );
 }
 
+function isDuplicateError(e: unknown): boolean {
+  const msg = (e as { message?: string; code?: string })?.message ?? "";
+  const code = (e as { code?: string })?.code ?? "";
+  return code === "23505" || /duplicate key|unique constraint|already exists/i.test(msg);
+}
+
 function PairingsTab() {
   const qc = useQueryClient();
   const { data: profiles = [] } = useAllProfiles();
@@ -195,18 +201,38 @@ function PairingsTab() {
   const nameOf = (id: string) => profiles.find((p) => p.id === id)?.full_name ?? id.slice(0, 8);
   const programOf = (id: string) => profiles.find((p) => p.id === id)?.program ?? "—";
 
+  const alreadyPaired = useMemo(
+    () => !!mentor && !!mentee && assignments.some((a) => a.mentor_id === mentor && a.mentee_id === mentee),
+    [mentor, mentee, assignments],
+  );
+
   const assign = useMutation({
     mutationFn: async () => {
       const { error } = await supabase.from("mentor_assignments").insert({ mentor_id: mentor, mentee_id: mentee });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Paired."); setMentor(""); setMentee(""); qc.invalidateQueries({ queryKey: ["all-assignments"] }); },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => {
+      if (isDuplicateError(e)) {
+        toast.error("This assignment already exists.");
+        qc.invalidateQueries({ queryKey: ["all-assignments"] });
+      } else {
+        toast.error((e as Error).message);
+      }
+    },
   });
   const unassign = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("mentor_assignments").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Removed."); qc.invalidateQueries({ queryKey: ["all-assignments"] }); },
   });
+
+  const handlePair = () => {
+    if (alreadyPaired) {
+      toast.error("This assignment already exists.");
+      return;
+    }
+    assign.mutate();
+  };
 
   return (
     <Card>
@@ -228,8 +254,15 @@ function PairingsTab() {
               <SelectContent>{menteeList.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name} ({p.program ?? "no program"})</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="flex items-end"><Button onClick={() => assign.mutate()} disabled={!mentor || !mentee}><UserPlus className="mr-1 h-4 w-4" /> Pair</Button></div>
+          <div className="flex items-end">
+            <Button onClick={handlePair} disabled={!mentor || !mentee || alreadyPaired || assign.isPending}>
+              <UserPlus className="mr-1 h-4 w-4" /> {alreadyPaired ? "Already paired" : "Pair"}
+            </Button>
+          </div>
         </div>
+        {alreadyPaired && (
+          <p className="text-xs text-destructive">This mentor and mentee are already paired.</p>
+        )}
 
         <div className="space-y-1.5">
           {assignments.length === 0 && <p className="text-xs text-muted-foreground">No pairs yet.</p>}
@@ -258,15 +291,35 @@ function FamiliesTab() {
   const menteeList = profiles.filter((p) => p.roles.includes("mentee"));
   const nameOf = (id: string) => profiles.find((p) => p.id === id)?.full_name ?? id.slice(0, 8);
 
+  const alreadyLinked = useMemo(
+    () => !!parent && !!child && links.some((l) => l.parent_id === parent && l.child_id === child),
+    [parent, child, links],
+  );
+
   const linkM = useMutation({
     mutationFn: async () => { const { error } = await supabase.from("parent_links").insert({ parent_id: parent, child_id: child }); if (error) throw error; },
     onSuccess: () => { toast.success("Linked."); setParent(""); setChild(""); qc.invalidateQueries({ queryKey: ["all-parent-links"] }); },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e) => {
+      if (isDuplicateError(e)) {
+        toast.error("This family link already exists.");
+        qc.invalidateQueries({ queryKey: ["all-parent-links"] });
+      } else {
+        toast.error((e as Error).message);
+      }
+    },
   });
   const unlink = useMutation({
     mutationFn: async (id: string) => { const { error } = await supabase.from("parent_links").delete().eq("id", id); if (error) throw error; },
     onSuccess: () => { toast.success("Unlinked."); qc.invalidateQueries({ queryKey: ["all-parent-links"] }); },
   });
+
+  const handleLink = () => {
+    if (alreadyLinked) {
+      toast.error("This family link already exists.");
+      return;
+    }
+    linkM.mutate();
+  };
 
   return (
     <Card>
@@ -285,8 +338,15 @@ function FamiliesTab() {
               <SelectContent>{menteeList.map((p) => <SelectItem key={p.id} value={p.id}>{p.full_name}</SelectItem>)}</SelectContent>
             </Select>
           </div>
-          <div className="flex items-end"><Button onClick={() => linkM.mutate()} disabled={!parent || !child}>Link</Button></div>
+          <div className="flex items-end">
+            <Button onClick={handleLink} disabled={!parent || !child || alreadyLinked || linkM.isPending}>
+              {alreadyLinked ? "Already linked" : "Link"}
+            </Button>
+          </div>
         </div>
+        {alreadyLinked && (
+          <p className="text-xs text-destructive">This parent and child are already linked.</p>
+        )}
         <div className="space-y-1.5">
           {links.length === 0 && <p className="text-xs text-muted-foreground">No family links yet.</p>}
           {links.map((l) => (
