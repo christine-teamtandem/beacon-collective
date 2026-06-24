@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
 import { Shield } from "lucide-react";
+import { lovable } from "@/integrations/lovable";
 
 const searchSchema = z.object({ program: z.enum(["vanguard", "flow"]).optional() });
 
