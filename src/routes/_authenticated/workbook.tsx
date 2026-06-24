@@ -164,12 +164,50 @@ ${currentTopic?.focus ?? ""}
             <CardDescription>Auto-saves when you click Save.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                {menteeId ? `Drafting for ${currentMentee?.full_name ?? "mentee"} · W${week}` : "Pick a mentee + week to begin."}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!menteeId || !currentTopic || drafting}
+                onClick={async () => {
+                  if (!currentTopic) return;
+                  setDrafting(true);
+                  try {
+                    const { draft } = await draftFn({
+                      data: {
+                        programName: PROGRAMS[program].name,
+                        weekNumber: currentTopic.week,
+                        weekTitle: currentTopic.title,
+                        weekFocus: currentTopic.focus ?? "",
+                        menteeName: currentMentee?.full_name ?? "the mentee",
+                      },
+                    });
+                    setContent(draft);
+                    toast.success("AI draft inserted.");
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  } finally {
+                    setDrafting(false);
+                  }
+                }}
+                className="border-gold/50 text-gold hover:bg-gold/10 hover:text-gold"
+              >
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                {drafting ? "Drafting..." : "AI Draft Assistant"}
+              </Button>
+            </div>
             <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={20}
+              disabled={!menteeId}
               placeholder={menteeId ? "Write your weekly session plan and observations..." : "Pick a mentee to start."} />
             <Button onClick={() => save.mutate()} disabled={save.isPending || !menteeId} className="bg-gradient-gold text-primary-foreground font-semibold">
               {save.isPending ? "Saving..." : "Save workbook"}
             </Button>
           </CardContent>
+
         </Card>
       </div>
     </div>
