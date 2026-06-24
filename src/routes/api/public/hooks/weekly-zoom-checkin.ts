@@ -72,10 +72,9 @@ export const Route = createFileRoute('/api/public/hooks/weekly-zoom-checkin')({
 
         const { data: sessions, error: sErr } = await supabase
           .from('sessions')
-          .select('id, program, cohort, mentor_id, title, starts_at, ends_at, zoom_url, zoom_meeting_id, zoom_passcode, zoom_start_url')
+          .select('id, program, cohort, mentor_id, title, description, starts_at, ends_at, zoom_url, zoom_meeting_id, zoom_passcode, zoom_start_url')
           .gte('starts_at', now.toISOString())
           .lte('starts_at', horizon.toISOString())
-          .not('zoom_url', 'is', null)
 
         if (sErr) {
           console.error('weekly-zoom-checkin: sessions fetch failed', sErr)
