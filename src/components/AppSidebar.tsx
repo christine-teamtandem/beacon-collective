@@ -98,7 +98,10 @@ export function AppSidebar() {
   const { role, program, fullName, user } = useUserContext();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const { isMobile, setOpenMobile } = useSidebar();
   const groups = itemsFor(role, program);
+
+  const closeMobile = () => { if (isMobile) setOpenMobile(false); };
 
   const programLabel = program === "vanguard" ? "Vanguard Brotherhood" : program === "flow" ? "Flow Collective" : role === "admin" ? "Admin Console" : "Awaiting assignment";
   const ProgramIcon = program === "flow" ? Heart : Shield;
@@ -107,6 +110,7 @@ export function AppSidebar() {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   };
+
 
   return (
     <Sidebar collapsible="icon">
