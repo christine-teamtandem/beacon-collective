@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useUserContext } from "@/hooks/useSession";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,25 +10,38 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { getCurriculum, type Program } from "@/lib/curriculum";
+import { Sparkles } from "lucide-react";
+import { getCurriculum, PROGRAMS, type Program } from "@/lib/curriculum";
+import { draftWorkbook } from "@/lib/ai.functions";
 
 export const Route = createFileRoute("/_authenticated/workbook")({
   component: Workbook,
 });
 
+
 function Workbook() {
-  const { user, role } = useUserContext();
+  const { user, role, program: viewProgram } = useUserContext();
   const qc = useQueryClient();
   const [menteeId, setMenteeId] = useState("");
   const [week, setWeek] = useState("1");
   const [content, setContent] = useState("");
+  const [drafting, setDrafting] = useState(false);
+  const draftFn = useServerFn(draftWorkbook);
+
+  const isAdmin = role === "admin";
 
   const { data: mentees = [] } = useQuery({
-    queryKey: ["mentees-workbook", user?.id],
+    queryKey: ["mentees-workbook", user?.id, isAdmin ? viewProgram : "self"],
     enabled: !!user,
     queryFn: async () => {
-      if (role === "admin") {
-        const { data } = await supabase.from("profiles").select("id, full_name, program");
+      if (isAdmin) {
+        // All mentees in the effective program cohort
+        const { data: roles } = await supabase.from("user_roles").select("user_id").eq("role", "mentee");
+        const ids = (roles ?? []).map((r) => r.user_id);
+        if (!ids.length) return [];
+        let q = supabase.from("profiles").select("id, full_name, program").in("id", ids);
+        if (viewProgram) q = q.eq("program", viewProgram);
+        const { data } = await q.order("full_name");
         return data ?? [];
       }
       const { data: assignments } = await supabase.from("mentor_assignments").select("mentee_id").eq("mentor_id", user!.id);
@@ -38,9 +52,17 @@ function Workbook() {
     },
   });
 
+  // Reset selection when cohort view changes for admin
+  useEffect(() => {
+    if (isAdmin) setMenteeId("");
+  }, [viewProgram, isAdmin]);
+
   const currentMentee = mentees.find((m) => m.id === menteeId);
-  const program: Program = (currentMentee?.program as Program) ?? "vanguard";
+  const program: Program = (currentMentee?.program as Program) ?? (viewProgram as Program) ?? "vanguard";
   const curriculum = getCurriculum(program);
+
+
+
 
   const { data: entry } = useQuery({
     queryKey: ["workbook-entry", user?.id, menteeId, week],
@@ -142,12 +164,50 @@ ${currentTopic?.focus ?? ""}
             <CardDescription>Auto-saves when you click Save.</CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs text-muted-foreground">
+                {menteeId ? `Drafting for ${currentMentee?.full_name ?? "mentee"} · W${week}` : "Pick a mentee + week to begin."}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={!menteeId || !currentTopic || drafting}
+                onClick={async () => {
+                  if (!currentTopic) return;
+                  setDrafting(true);
+                  try {
+                    const { draft } = await draftFn({
+                      data: {
+                        programName: PROGRAMS[program].name,
+                        weekNumber: currentTopic.week,
+                        weekTitle: currentTopic.title,
+                        weekFocus: currentTopic.focus ?? "",
+                        menteeName: currentMentee?.full_name ?? "the mentee",
+                      },
+                    });
+                    setContent(draft);
+                    toast.success("AI draft inserted.");
+                  } catch (e) {
+                    toast.error((e as Error).message);
+                  } finally {
+                    setDrafting(false);
+                  }
+                }}
+                className="border-gold/50 text-gold hover:bg-gold/10 hover:text-gold"
+              >
+                <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                {drafting ? "Drafting..." : "AI Draft Assistant"}
+              </Button>
+            </div>
             <Textarea value={content} onChange={(e) => setContent(e.target.value)} rows={20}
+              disabled={!menteeId}
               placeholder={menteeId ? "Write your weekly session plan and observations..." : "Pick a mentee to start."} />
             <Button onClick={() => save.mutate()} disabled={save.isPending || !menteeId} className="bg-gradient-gold text-primary-foreground font-semibold">
               {save.isPending ? "Saving..." : "Save workbook"}
             </Button>
           </CardContent>
+
         </Card>
       </div>
     </div>
