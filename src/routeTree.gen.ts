@@ -28,6 +28,7 @@ import { Route as AuthenticatedAnnouncementsRouteImport } from './routes/_authen
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as AuthenticatedCurriculumIndexRouteImport } from './routes/_authenticated/curriculum.index'
 import { Route as LovableEmailSuppressionRouteImport } from './routes/lovable/email/suppression'
+import { Route as AuthenticatedProfileUserIdRouteImport } from './routes/_authenticated/profile.$userId'
 import { Route as AuthenticatedHubProgramRouteImport } from './routes/_authenticated/hub.$program'
 import { Route as AuthenticatedCurriculumWeekRouteImport } from './routes/_authenticated/curriculum.$week'
 import { Route as LovableEmailTransactionalSendRouteImport } from './routes/lovable/email/transactional/send'
@@ -134,6 +135,12 @@ const LovableEmailSuppressionRoute = LovableEmailSuppressionRouteImport.update({
   path: '/lovable/email/suppression',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AuthenticatedProfileUserIdRoute =
+  AuthenticatedProfileUserIdRouteImport.update({
+    id: '/$userId',
+    path: '/$userId',
+    getParentRoute: () => AuthenticatedProfileRoute,
+  } as any)
 const AuthenticatedHubProgramRoute = AuthenticatedHubProgramRouteImport.update({
   id: '/hub/$program',
   path: '/hub/$program',
@@ -196,7 +203,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
-  '/profile': typeof AuthenticatedProfileRoute
+  '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/tracking': typeof AuthenticatedTrackingRoute
@@ -204,6 +211,7 @@ export interface FileRoutesByFullPath {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
   '/hub/$program': typeof AuthenticatedHubProgramRoute
+  '/profile/$userId': typeof AuthenticatedProfileUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/curriculum/': typeof AuthenticatedCurriculumIndexRoute
   '/api/public/hooks/weekly-zoom-checkin': typeof ApiPublicHooksWeeklyZoomCheckinRoute
@@ -225,7 +233,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
-  '/profile': typeof AuthenticatedProfileRoute
+  '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/resources': typeof AuthenticatedResourcesRoute
   '/tracking': typeof AuthenticatedTrackingRoute
@@ -233,6 +241,7 @@ export interface FileRoutesByTo {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
   '/hub/$program': typeof AuthenticatedHubProgramRoute
+  '/profile/$userId': typeof AuthenticatedProfileUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/curriculum': typeof AuthenticatedCurriculumIndexRoute
   '/api/public/hooks/weekly-zoom-checkin': typeof ApiPublicHooksWeeklyZoomCheckinRoute
@@ -256,7 +265,7 @@ export interface FileRoutesById {
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
-  '/_authenticated/profile': typeof AuthenticatedProfileRoute
+  '/_authenticated/profile': typeof AuthenticatedProfileRouteWithChildren
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/resources': typeof AuthenticatedResourcesRoute
   '/_authenticated/tracking': typeof AuthenticatedTrackingRoute
@@ -264,6 +273,7 @@ export interface FileRoutesById {
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
   '/_authenticated/curriculum/$week': typeof AuthenticatedCurriculumWeekRoute
   '/_authenticated/hub/$program': typeof AuthenticatedHubProgramRoute
+  '/_authenticated/profile/$userId': typeof AuthenticatedProfileUserIdRoute
   '/lovable/email/suppression': typeof LovableEmailSuppressionRoute
   '/_authenticated/curriculum/': typeof AuthenticatedCurriculumIndexRoute
   '/api/public/hooks/weekly-zoom-checkin': typeof ApiPublicHooksWeeklyZoomCheckinRoute
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/curriculum/$week'
     | '/hub/$program'
+    | '/profile/$userId'
     | '/lovable/email/suppression'
     | '/curriculum/'
     | '/api/public/hooks/weekly-zoom-checkin'
@@ -324,6 +335,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/curriculum/$week'
     | '/hub/$program'
+    | '/profile/$userId'
     | '/lovable/email/suppression'
     | '/curriculum'
     | '/api/public/hooks/weekly-zoom-checkin'
@@ -354,6 +366,7 @@ export interface FileRouteTypes {
     | '/email/unsubscribe'
     | '/_authenticated/curriculum/$week'
     | '/_authenticated/hub/$program'
+    | '/_authenticated/profile/$userId'
     | '/lovable/email/suppression'
     | '/_authenticated/curriculum/'
     | '/api/public/hooks/weekly-zoom-checkin'
@@ -516,6 +529,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LovableEmailSuppressionRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_authenticated/profile/$userId': {
+      id: '/_authenticated/profile/$userId'
+      path: '/$userId'
+      fullPath: '/profile/$userId'
+      preLoaderRoute: typeof AuthenticatedProfileUserIdRouteImport
+      parentRoute: typeof AuthenticatedProfileRoute
+    }
     '/_authenticated/hub/$program': {
       id: '/_authenticated/hub/$program'
       path: '/hub/$program'
@@ -582,6 +602,17 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AuthenticatedProfileRouteChildren {
+  AuthenticatedProfileUserIdRoute: typeof AuthenticatedProfileUserIdRoute
+}
+
+const AuthenticatedProfileRouteChildren: AuthenticatedProfileRouteChildren = {
+  AuthenticatedProfileUserIdRoute: AuthenticatedProfileUserIdRoute,
+}
+
+const AuthenticatedProfileRouteWithChildren =
+  AuthenticatedProfileRoute._addFileChildren(AuthenticatedProfileRouteChildren)
+
 interface AuthenticatedRouteRouteChildren {
   AuthenticatedAdminRoute: typeof AuthenticatedAdminRoute
   AuthenticatedAnnouncementsRoute: typeof AuthenticatedAnnouncementsRoute
@@ -590,7 +621,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
-  AuthenticatedProfileRoute: typeof AuthenticatedProfileRoute
+  AuthenticatedProfileRoute: typeof AuthenticatedProfileRouteWithChildren
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
   AuthenticatedTrackingRoute: typeof AuthenticatedTrackingRoute
@@ -608,7 +639,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
-  AuthenticatedProfileRoute: AuthenticatedProfileRoute,
+  AuthenticatedProfileRoute: AuthenticatedProfileRouteWithChildren,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
   AuthenticatedTrackingRoute: AuthenticatedTrackingRoute,
