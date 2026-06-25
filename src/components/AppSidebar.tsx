@@ -195,16 +195,12 @@ export function AppSidebar() {
 
                 {/* Email sub-menu — injected into the Communication group only */}
                 {g.label === "Communication" && hasEmail && (
-                  <Collapsible
-                    open={emailOpen}
-                    onOpenChange={setEmailOpen}
-                    asChild
-                  >
-                    <SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <Collapsible open={emailOpen} onOpenChange={setEmailOpen}>
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
                           isActive={emailActive && !emailOpen}
-                          className="flex items-center justify-between w-full"
+                          className="flex w-full items-center justify-between"
                         >
                           <span className="flex items-center gap-2">
                             <Mail className="h-4 w-4" />
@@ -221,7 +217,7 @@ export function AppSidebar() {
                         <SidebarMenuSub>
                           {emailSubItems.map((sub) => (
                             <SidebarMenuSubItem key={sub.title}>
-                              <SidebarMenuSubButton asChild>
+                              <SidebarMenuSubButton asChild isActive={emailActive && sub.title === "Compose Email" && !emailOpen ? false : false}>
                                 <Link
                                   to="/compose"
                                   onClick={closeMobile}
@@ -235,8 +231,8 @@ export function AppSidebar() {
                           ))}
                         </SidebarMenuSub>
                       </CollapsibleContent>
-                    </SidebarMenuItem>
-                  </Collapsible>
+                    </Collapsible>
+                  </SidebarMenuItem>
                 )}
               </SidebarMenu>
             </SidebarGroupContent>
