@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.get_profile_address(uuid) FROM PUBLIC, anon;
