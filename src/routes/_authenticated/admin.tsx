@@ -4,7 +4,7 @@ import { useUserContext } from "@/hooks/useSession";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { deleteAccount, sendPasswordReset, unlockAccount, resendLoginEmail, sendTestEmail, runApiDiagnostics } from "@/lib/admin.functions";
+import { deleteAccount, sendPasswordReset, unlockAccount, resendLoginEmail, sendTestEmail, runApiDiagnostics, triggerWeeklyZoomCheckin } from "@/lib/admin.functions";
 import type { DiagCheck } from "@/lib/admin.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -436,21 +436,14 @@ function Diagnostics() {
 }
 
 function RunWeeklyCheckinButton() {
+  const trigger = useServerFn(triggerWeeklyZoomCheckin);
   const run = useMutation({
-    mutationFn: async () => {
-      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY as string;
-      const res = await fetch("/api/public/hooks/weekly-zoom-checkin", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", apikey: anonKey },
-        body: "{}",
-      });
-      if (!res.ok) throw new Error(`Failed (${res.status})`);
-      return res.json();
-    },
+    mutationFn: async () => trigger({}),
     onSuccess: (r: any) =>
       toast.success(`Weekly check-ins sent: ${r.queued} queued, ${r.skipped} skipped`),
     onError: (e) => toast.error((e as Error).message),
   });
+
   return (
     <Button variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
       <Zap className={`mr-1.5 h-4 w-4 ${run.isPending ? "animate-pulse" : ""}`} />

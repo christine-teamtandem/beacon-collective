@@ -49,18 +49,28 @@ export const Route = createFileRoute('/api/public/hooks/weekly-zoom-checkin')({
       POST: async ({ request }) => {
         const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
         const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-        const expectedKey =
-          process.env.SUPABASE_PUBLISHABLE_KEY ||
-          import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
+        // Server-only shared secret. Must NOT be the Supabase publishable key
+        // (which is bundled into the client JS and trivially extractable).
+        const expectedSecret = process.env.CHECKIN_WEBHOOK_SECRET
 
-        if (!supabaseUrl || !serviceKey || !expectedKey) {
+        if (!supabaseUrl || !serviceKey || !expectedSecret) {
           return Response.json({ error: 'Server configuration error' }, { status: 500 })
         }
 
-        const apikey = request.headers.get('apikey') || request.headers.get('x-api-key')
-        if (!apikey || apikey !== expectedKey) {
+        const provided =
+          request.headers.get('x-webhook-secret') ||
+          request.headers.get('authorization')?.replace(/^Bearer\s+/i, '') ||
+          ''
+        // Constant-time-ish compare
+        const a = new TextEncoder().encode(provided)
+        const b = new TextEncoder().encode(expectedSecret)
+        let ok = a.length === b.length
+        const len = Math.max(a.length, b.length)
+        for (let i = 0; i < len; i++) ok = ok && (a[i] === b[i])
+        if (!ok) {
           return Response.json({ error: 'Unauthorized' }, { status: 401 })
         }
+
 
         const supabase = createClient(supabaseUrl, serviceKey, {
           auth: { autoRefreshToken: false, persistSession: false },

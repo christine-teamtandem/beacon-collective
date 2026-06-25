@@ -396,3 +396,27 @@ export const hubSmokeTest = createServerFn({ method: "POST" })
 
     return { checks, recentEmails: logs ?? [] };
   });
+
+/**
+ * Admin-only trigger for the weekly Zoom check-in hook.
+ * Holds the CHECKIN_WEBHOOK_SECRET server-side so the public hook is never
+ * callable with a browser-exposed key.
+ */
+export const triggerWeeklyZoomCheckin = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const secret = process.env.CHECKIN_WEBHOOK_SECRET;
+    if (!secret) throw new Error("CHECKIN_WEBHOOK_SECRET is not configured");
+    const res = await fetch(`${getSiteUrl()}/api/public/hooks/weekly-zoom-checkin`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "x-webhook-secret": secret },
+      body: "{}",
+    });
+    const json = (await res.json().catch(() => ({}))) as {
+      queued?: number; skipped?: number; sessions?: number; errors?: string[]; error?: string;
+    };
+    if (!res.ok) throw new Error(json.error || `Failed (${res.status})`);
+    return json;
+  });
+
