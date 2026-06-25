@@ -4,7 +4,7 @@ import { useUserContext } from "@/hooks/useSession";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { deleteAccount, sendPasswordReset, unlockAccount, resendLoginEmail, sendTestEmail, runApiDiagnostics } from "@/lib/admin.functions";
+import { deleteAccount, sendPasswordReset, unlockAccount, resendLoginEmail, sendTestEmail, runApiDiagnostics, triggerWeeklyZoomCheckin } from "@/lib/admin.functions";
 import type { DiagCheck } from "@/lib/admin.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
