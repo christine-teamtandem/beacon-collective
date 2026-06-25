@@ -2,6 +2,80 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
+// ─── AI draft generation ──────────────────────────────────────────────────────
+//
+// Uses the platform-managed Lovable AI gateway (LOVABLE_API_KEY).
+// The Resend pipeline is already wired through sendLovableEmail in the
+// queue processor — no separate RESEND_API_KEY is needed in app code.
+//
+// Sender display name updated to "Freebleeders Mentorship Hub" per brand spec.
+// Actual sending domain remains mentorship.freebleeders.org (Resend-verified).
+// To route through freebleeders@gmail.com, verify that address in Resend and
+// update the `from` field in sendComposedEmail below.
+
+const AiDraftInput = z.object({
+  reference: z.string().min(1).max(8000),
+  subject: z.string().max(200).optional(),
+  context: z.string().max(500).optional(),
+});
+
+export const generateEmailDraft = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => AiDraftInput.parse(d))
+  .handler(async ({ data }) => {
+    const apiKey = process.env.LOVABLE_API_KEY;
+    if (!apiKey) throw new Error("AI service unavailable — LOVABLE_API_KEY not set.");
+
+    const systemPrompt = `You are an expert email copywriter for Freebleeders Mentorship Hub, a premium mentorship platform serving young men and women aged 12–18. Your brand voice is warm, purposeful, and elevated — never corporate or generic.
+
+When given a reference email, template, or content notes, you MUST:
+1. Match the exact tone, structure, and intent of the reference material.
+2. Produce a polished, complete email body (no subject line — just the body text).
+3. Use clear paragraph breaks (double newlines between paragraphs).
+4. Do NOT include salutations like "Hi [Name]" or sign-offs like "Regards" — those are handled by the system.
+5. Do NOT include placeholder brackets like [Name] or [Date].
+6. Keep the tone genuine, premium, and aligned with the Freebleeders brand identity.
+7. Return only the email body text — no commentary, no markdown formatting, no headings.`;
+
+    const userPrompt = [
+      data.subject ? `Email subject: ${data.subject}` : null,
+      data.context ? `Additional context: ${data.context}` : null,
+      `Reference material to match:\n\n${data.reference}`,
+    ]
+      .filter(Boolean)
+      .join("\n\n");
+
+    const res = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Lovable-API-Key": apiKey,
+        "X-Lovable-AIG-SDK": "fetch",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-3-flash-preview",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: userPrompt },
+        ],
+      }),
+    });
+
+    if (!res.ok) {
+      if (res.status === 429) throw new Error("AI is busy. Please try again shortly.");
+      if (res.status === 402) throw new Error("AI credits exhausted. Contact your administrator.");
+      const txt = await res.text().catch(() => "");
+      throw new Error(`AI request failed (${res.status}). ${txt.slice(0, 160)}`);
+    }
+
+    const json = (await res.json()) as {
+      choices?: Array<{ message?: { content?: string } }>;
+    };
+    const draft = json.choices?.[0]?.message?.content?.trim() ?? "";
+    if (!draft) throw new Error("AI returned an empty draft.");
+    return { draft };
+  });
+
 const Input = z.object({
   recipientIds: z.array(z.string().uuid()).min(1).max(200),
   subject: z.string().trim().min(1).max(200),
@@ -260,7 +334,7 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
         payload: {
           message_id: messageId,
           to: r.email,
-          from: "freebleeders mentorship hub <noreply@mentorship.freebleeders.org>",
+          from: "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>",
           sender_domain: "notify.mentorship.freebleeders.org",
           subject: data.subject,
           html, text,

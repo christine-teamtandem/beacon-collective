@@ -1,40 +1,51 @@
 import { Link, useRouterState, useNavigate } from "@tanstack/react-router";
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter, useSidebar,
+  SidebarHeader, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarFooter,
+  SidebarMenuSub, SidebarMenuSubItem, SidebarMenuSubButton, useSidebar,
 } from "@/components/ui/sidebar";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 
 import { useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
-  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck, Mail, UserCircle2,
+  Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck,
+  Mail, UserCircle2, ChevronRight, Send, Clock, History, CalendarClock,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
 
 const profileItem: Item = { title: "My Profile", url: "/profile", icon: UserCircle2 };
 
+/** Email sub-navigation items — each points to /compose with a tab search param. */
+const emailSubItems = [
+  { title: "Compose Email", tab: "compose", icon: Send },
+  { title: "Scheduled",     tab: "scheduled", icon: CalendarClock },
+  { title: "Drafts",        tab: "drafts", icon: Clock },
+  { title: "Sent",          tab: "sent", icon: History },
+] as const;
+
 function itemsFor(role: AppRole | null, _program: Program | null): { label: string; items: Item[] }[] {
   if (role === "admin") {
     return [
       { label: "Super Admin", items: [
-        { title: "Admin Portal", url: "/admin", icon: ShieldCheck },
-        { title: "Students", url: "/people", icon: Users },
-        { title: "Sponsor Reports", url: "/reports", icon: BarChart3 },
+        { title: "Admin Portal",    url: "/admin",    icon: ShieldCheck },
+        { title: "Students",        url: "/people",   icon: Users },
+        { title: "Sponsor Reports", url: "/reports",  icon: BarChart3 },
       ]},
       { label: "Admin", items: [
-        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "Tracking Logs", url: "/tracking", icon: ClipboardList },
-        { title: "Workbook Reviews", url: "/workbook", icon: FileText },
-        { title: "Resources", url: "/resources", icon: FolderOpen },
+        { title: "Dashboard",        url: "/dashboard", icon: LayoutDashboard },
+        { title: "Tracking Logs",    url: "/tracking",  icon: ClipboardList },
+        { title: "Workbook Reviews", url: "/workbook",  icon: FileText },
+        { title: "Resources",        url: "/resources", icon: FolderOpen },
       ]},
       { label: "Communication", items: [
-        { title: "Calendar", url: "/calendar", icon: Calendar },
+        { title: "Calendar",      url: "/calendar",      icon: Calendar },
         { title: "Announcements", url: "/announcements", icon: Megaphone },
-        { title: "Messages", url: "/messages", icon: MessageCircle },
-        { title: "Compose email", url: "/compose", icon: Mail },
+        { title: "Messages",      url: "/messages",      icon: MessageCircle },
       ]},
       { label: "Curriculum", items: [
         { title: "12-Week Curriculum", url: "/curriculum", icon: Shield },
@@ -45,15 +56,14 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
   if (role === "mentor") {
     return [
       { label: "Mentor", items: [
-        { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-        { title: "Tracking Logs", url: "/tracking", icon: ClipboardList },
-        { title: "Resources", url: "/resources", icon: FolderOpen },
+        { title: "Dashboard",     url: "/dashboard", icon: LayoutDashboard },
+        { title: "Tracking Logs", url: "/tracking",  icon: ClipboardList },
+        { title: "Resources",     url: "/resources", icon: FolderOpen },
       ]},
       { label: "Communication", items: [
-        { title: "Calendar", url: "/calendar", icon: Calendar },
+        { title: "Calendar",      url: "/calendar",      icon: Calendar },
         { title: "Announcements", url: "/announcements", icon: Megaphone },
-        { title: "Messages", url: "/messages", icon: MessageCircle },
-        { title: "Compose email", url: "/compose", icon: Mail },
+        { title: "Messages",      url: "/messages",      icon: MessageCircle },
       ]},
       { label: "Curriculum", items: [
         { title: "12-Week Curriculum", url: "/curriculum", icon: BookOpen },
@@ -67,9 +77,9 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
         { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
       ]},
       { label: "Communication", items: [
-        { title: "Calendar", url: "/calendar", icon: Calendar },
+        { title: "Calendar",      url: "/calendar",      icon: Calendar },
         { title: "Announcements", url: "/announcements", icon: Megaphone },
-        { title: "Messages", url: "/messages", icon: MessageCircle },
+        { title: "Messages",      url: "/messages",      icon: MessageCircle },
       ]},
       { label: "Account", items: [profileItem] },
     ];
@@ -77,14 +87,14 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
   // mentee
   return [
     { label: "My Hub", items: [
-      { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },
-      { title: "My Workbook", url: "/workbook", icon: FileText },
-      { title: "Resources", url: "/resources", icon: FolderOpen },
+      { title: "Dashboard",  url: "/dashboard", icon: LayoutDashboard },
+      { title: "My Workbook", url: "/workbook",  icon: FileText },
+      { title: "Resources",  url: "/resources", icon: FolderOpen },
     ]},
     { label: "Communication", items: [
-      { title: "Calendar", url: "/calendar", icon: Calendar },
+      { title: "Calendar",      url: "/calendar",      icon: Calendar },
       { title: "Announcements", url: "/announcements", icon: Megaphone },
-      { title: "Messages", url: "/messages", icon: MessageCircle },
+      { title: "Messages",      url: "/messages",      icon: MessageCircle },
     ]},
     { label: "Curriculum", items: [
       { title: "12-Week Curriculum", url: "/curriculum", icon: BookOpen },
@@ -98,19 +108,29 @@ export function AppSidebar() {
   const { role, program, fullName, user } = useUserContext();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tabParam = useRouterState({ select: (s) => (s.location.search as any)?.tab as string | undefined });
   const { isMobile, setOpenMobile } = useSidebar();
-  const groups = itemsFor(role, program);
+
+  const emailActive = pathname === "/compose";
+  const [emailOpen, setEmailOpen] = useState(emailActive);
 
   const closeMobile = () => { if (isMobile) setOpenMobile(false); };
 
-  const programLabel = program === "vanguard" ? "Vanguard Brotherhood" : program === "flow" ? "Flow Collective" : role === "admin" ? "Admin Console" : "Awaiting assignment";
+  const hasEmail = role === "admin" || role === "mentor";
+  const groups = itemsFor(role, program);
+
+  const programLabel =
+    program === "vanguard" ? "Vanguard Brotherhood"
+    : program === "flow" ? "Flow Collective"
+    : role === "admin" ? "Admin Console"
+    : "Awaiting assignment";
   const ProgramIcon = program === "flow" ? Heart : Shield;
 
   const signOut = async () => {
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   };
-
 
   return (
     <Sidebar collapsible="icon">
@@ -128,18 +148,26 @@ export function AppSidebar() {
           <div className="px-2 pb-2">
             <p className="px-1 pb-1 text-[10px] uppercase tracking-wider text-muted-foreground">Hubs</p>
             <div className="grid grid-cols-2 gap-1">
-              <Link to="/hub/$program" params={{ program: "vanguard" }} onClick={closeMobile} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+              <Link
+                to="/hub/$program"
+                params={{ program: "vanguard" }}
+                onClick={closeMobile}
+                className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent"
+              >
                 <Shield className="h-3 w-3 text-gold" /> Vanguard
               </Link>
-              <Link to="/hub/$program" params={{ program: "flow" }} onClick={closeMobile} className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent">
+              <Link
+                to="/hub/$program"
+                params={{ program: "flow" }}
+                onClick={closeMobile}
+                className="flex items-center gap-1 rounded-md border border-sidebar-border bg-sidebar-accent/30 px-2 py-1.5 text-xs font-semibold hover:bg-sidebar-accent"
+              >
                 <Heart className="h-3 w-3 text-rose" /> Flow
               </Link>
-
             </div>
           </div>
         )}
       </SidebarHeader>
-
 
       <SidebarContent>
         {groups.map((g) => (
@@ -148,19 +176,80 @@ export function AppSidebar() {
             <SidebarGroupContent>
               <SidebarMenu>
                 {g.items.map((item) => {
-                  const active = pathname === item.url || (item.url !== "/dashboard" && pathname.startsWith(item.url));
+                  const active =
+                    pathname === item.url ||
+                    (item.url !== "/dashboard" && pathname.startsWith(item.url));
                   return (
                     <SidebarMenuItem key={item.url}>
                       <SidebarMenuButton asChild isActive={active}>
-                        <Link to={item.url} onClick={closeMobile} className="flex items-center gap-2">
+                        <Link
+                          to={item.url}
+                          onClick={closeMobile}
+                          className="flex items-center gap-2"
+                        >
                           <item.icon className="h-4 w-4" />
                           <span>{item.title}</span>
                         </Link>
-
                       </SidebarMenuButton>
                     </SidebarMenuItem>
                   );
                 })}
+
+                {/* Email sub-menu — injected into the Communication group only */}
+                {g.label === "Communication" && hasEmail && (
+                  <Collapsible
+                    open={emailOpen}
+                    onOpenChange={setEmailOpen}
+                    asChild
+                  >
+                    <SidebarMenuItem>
+                      <CollapsibleTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={emailActive && !emailOpen}
+                          className="flex items-center justify-between w-full"
+                        >
+                          <span className="flex items-center gap-2">
+                            <Mail className="h-4 w-4" />
+                            <span>Email</span>
+                          </span>
+                          <ChevronRight
+                            className={`h-3.5 w-3.5 shrink-0 text-muted-foreground transition-transform duration-200 ${
+                              emailOpen ? "rotate-90" : ""
+                            }`}
+                          />
+                        </SidebarMenuButton>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <SidebarMenuSub>
+                          {emailSubItems.map((sub) => {
+                            const subActive =
+                              pathname === "/compose" &&
+                              (tabParam === sub.tab ||
+                                (!tabParam && sub.tab === "compose"));
+                            return (
+                              <SidebarMenuSubItem key={sub.tab}>
+                                <SidebarMenuSubButton
+                                  asChild
+                                  isActive={subActive}
+                                >
+                                  <Link
+                                    to="/compose"
+                                    search={{ tab: sub.tab }}
+                                    onClick={closeMobile}
+                                    className="flex items-center gap-2"
+                                  >
+                                    <sub.icon className="h-3.5 w-3.5" />
+                                    <span>{sub.title}</span>
+                                  </Link>
+                                </SidebarMenuSubButton>
+                              </SidebarMenuSubItem>
+                            );
+                          })}
+                        </SidebarMenuSub>
+                      </CollapsibleContent>
+                    </SidebarMenuItem>
+                  </Collapsible>
+                )}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
