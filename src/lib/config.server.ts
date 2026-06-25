@@ -24,3 +24,33 @@ export function getServerConfig() {
     //   stripeSecretKey: process.env.STRIPE_SECRET_KEY,
   };
 }
+
+/**
+ * Strip the junk that commonly sneaks into env-var values pasted through a
+ * dashboard UI: surrounding single/double quotes, backticks, leading/trailing
+ * whitespace, and stray newlines/carriage-returns. A trailing newline or a
+ * pair of quotes is enough to make Resend reject a perfectly good key with
+ * "API key is invalid".
+ */
+export function sanitizeEnv(raw: string | undefined | null): string {
+  if (!raw) return "";
+  return raw
+    .trim()
+    .replace(/^['"`]+/, "")
+    .replace(/['"`]+$/, "")
+    .replace(/[\r\n\t]/g, "")
+    .trim();
+}
+
+/** Sanitized Resend API key (read per-request — never at module scope). */
+export function getResendApiKey(): string {
+  return sanitizeEnv(process.env.RESEND_API_KEY);
+}
+
+/** Sanitized Resend "from" envelope, with a safe branded default. */
+export function getResendFrom(): string {
+  return (
+    sanitizeEnv(process.env.RESEND_FROM_EMAIL) ||
+    "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>"
+  );
+}

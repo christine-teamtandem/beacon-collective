@@ -26,8 +26,9 @@ export const sendResendEmail = createServerFn({ method: 'POST' })
   .middleware([requireSupabaseAuth])
   .inputValidator((data: unknown) => sendSchema.parse(data))
   .handler(async ({ data }) => {
-    const lovableKey = process.env.LOVABLE_API_KEY
-    const resendKey = process.env.RESEND_API_KEY
+    const { sanitizeEnv, getResendApiKey } = await import('@/lib/config.server')
+    const lovableKey = sanitizeEnv(process.env.LOVABLE_API_KEY)
+    const resendKey = getResendApiKey()
     if (!lovableKey) throw new Error('LOVABLE_API_KEY is not configured')
     if (!resendKey) throw new Error('RESEND_API_KEY is not configured')
 

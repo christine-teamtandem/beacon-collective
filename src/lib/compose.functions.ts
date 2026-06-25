@@ -318,10 +318,9 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
     const html = await render(element);
     const text = await render(element, { plainText: true });
 
-    const resendApiKey = process.env.RESEND_API_KEY;
-    const fromAddress =
-      process.env.RESEND_FROM_EMAIL ||
-      "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>";
+    const { getResendApiKey, getResendFrom } = await import("@/lib/config.server");
+    const resendApiKey = getResendApiKey();
+    const fromAddress = getResendFrom();
 
     const stamp = Date.now();
     const results: { id: string; email: string | undefined; ok: boolean; reason?: string }[] = [];
@@ -357,10 +356,17 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
           } else {
             status = "failed";
             const body = await resendRes.json().catch(() => ({})) as Record<string, unknown>;
-            errorMsg =
+            let baseMsg =
               (body?.message as string) ||
               (body?.error as string) ||
               `Resend HTTP ${resendRes.status}`;
+            // Make the most common failure self-explanatory in the Sent log.
+            if (resendRes.status === 401 || /api key is invalid/i.test(baseMsg)) {
+              baseMsg = `API key is invalid (set RESEND_API_KEY in Lovable settings; key currently starts "${resendApiKey.slice(0, 5)}…", length ${resendApiKey.length})`;
+            } else if (resendRes.status === 403 || /domain is not verified/i.test(baseMsg)) {
+              baseMsg = `${baseMsg} — verify the sending domain for "${fromAddress}" in Resend → Domains`;
+            }
+            errorMsg = baseMsg;
           }
 
           await supabaseAdmin.from("email_send_log").insert({
