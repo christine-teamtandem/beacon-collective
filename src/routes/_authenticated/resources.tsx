@@ -110,7 +110,7 @@ function ResourceList({ program }: { program: Program }) {
   if (!items.length) {
     return (
       <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">
-        Walang resource pa. Mentors at admins ang makakapag-upload.
+        No resources yet. Mentors and admins can upload files and links here.
       </CardContent></Card>
     );
   }

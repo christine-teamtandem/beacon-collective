@@ -11,7 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalIcon, Video, Plus, Trash2, Link as LinkIcon, Unlink } from "lucide-react";
+import { Calendar as CalIcon, Video, Plus, Trash2, Link as LinkIcon, Unlink, AlertTriangle, ExternalLink, Copy, CheckCheck } from "lucide-react";
 import { format, isAfter, addMinutes, subMinutes } from "date-fns";
 import { toast } from "sonner";
 import { getZoomConnection, getZoomAuthUrl, disconnectZoom, createZoomMeetingForSession } from "@/lib/zoom.functions";
@@ -189,10 +189,13 @@ function NewSessionDialog({ program, userId }: { program: "vanguard" | "flow"; u
 
 function ZoomConnectionCard() {
   const qc = useQueryClient();
-  const getConnFn = useServerFn(getZoomConnection);
-  const getAuthFn = useServerFn(getZoomAuthUrl);
+  const getConnFn    = useServerFn(getZoomConnection);
+  const getAuthFn    = useServerFn(getZoomAuthUrl);
   const disconnectFn = useServerFn(disconnectZoom);
   const search = useSearch({ from: "/_authenticated/calendar" });
+
+  const [notConfigured, setNotConfigured] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data, isLoading } = useQuery({
     queryKey: ["zoom-conn"],
@@ -200,42 +203,163 @@ function ZoomConnectionCard() {
   });
 
   useEffect(() => {
-    if (search.zoom === "connected") toast.success("Zoom connected!");
-    else if (search.zoom === "error") toast.error("Zoom connection failed.");
+    if (search.zoom === "connected") {
+      toast.success("Zoom connected successfully!");
+      setNotConfigured(false);
+    } else if (search.zoom === "error") {
+      toast.error("Zoom OAuth failed — check that your redirect URI matches exactly in the Zoom app settings.");
+    }
   }, [search.zoom]);
 
   const connect = useMutation({
     mutationFn: async () => (getAuthFn as any)({}),
     onSuccess: (r: any) => { window.location.href = r.url; },
-    onError: (e) => toast.error((e as Error).message),
-  });
-  const disconnect = useMutation({
-    mutationFn: async () => (disconnectFn as any)({}),
-    onSuccess: () => { toast.success("Zoom disconnected"); qc.invalidateQueries({ queryKey: ["zoom-conn"] }); },
-    onError: (e) => toast.error((e as Error).message),
+    onError: (e: any) => {
+      const msg: string = e?.message ?? "";
+      if (msg.toLowerCase().includes("zoom_client_id") || msg.toLowerCase().includes("not configured")) {
+        setNotConfigured(true);
+      } else {
+        toast.error(msg);
+      }
+    },
   });
 
+  const disconnect = useMutation({
+    mutationFn: async () => (disconnectFn as any)({}),
+    onSuccess: () => {
+      toast.success("Zoom disconnected.");
+      qc.invalidateQueries({ queryKey: ["zoom-conn"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const callbackUrl = `${window.location.origin}/api/public/zoom/callback`;
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(callbackUrl).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
   const conn = data?.connection;
+
+  // ── Connected state ──────────────────────────────────────────────────────
+  if (!isLoading && conn) {
+    return (
+      <Card className="border-green-600/30 bg-green-600/5">
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Video className="h-5 w-5 text-green-500" />
+            Zoom connected
+          </CardTitle>
+          <CardDescription>
+            Signed in as <strong>{conn.zoom_email ?? "your Zoom account"}</strong>.
+            Sessions will auto-create Zoom meetings when you click "Create Zoom" on a session.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <Button variant="outline" size="sm" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>
+            <Unlink className="mr-1.5 h-3.5 w-3.5" />
+            {disconnect.isPending ? "Disconnecting…" : "Disconnect Zoom"}
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Not configured — show setup guide ────────────────────────────────────
+  if (notConfigured) {
+    return (
+      <Card className="border-amber-500/40 bg-amber-500/5">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <AlertTriangle className="h-5 w-5 text-amber-500" />
+            Zoom setup required
+          </CardTitle>
+          <CardDescription>
+            <code className="text-xs">ZOOM_CLIENT_ID</code> and <code className="text-xs">ZOOM_CLIENT_SECRET</code> are
+            not configured. Follow these steps to enable Zoom OAuth:
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4 text-sm">
+          <ol className="list-decimal list-inside space-y-3 text-muted-foreground">
+            <li>
+              Go to{" "}
+              <a
+                href="https://marketplace.zoom.us/develop/create"
+                target="_blank"
+                rel="noreferrer"
+                className="text-primary underline underline-offset-2 inline-flex items-center gap-1"
+              >
+                marketplace.zoom.us <ExternalLink className="h-3 w-3" />
+              </a>{" "}
+              and create a new <strong className="text-foreground">User-managed OAuth app</strong>.
+            </li>
+            <li>
+              Under <strong className="text-foreground">Redirect URL for OAuth</strong>, paste this exact URL:
+              <div className="mt-1.5 flex items-center gap-2 rounded-md border border-border bg-muted px-3 py-2 font-mono text-xs">
+                <span className="flex-1 break-all">{callbackUrl}</span>
+                <button
+                  type="button"
+                  onClick={copyUrl}
+                  className="shrink-0 text-muted-foreground hover:text-foreground"
+                  aria-label="Copy URL"
+                >
+                  {copied ? <CheckCheck className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            </li>
+            <li>
+              Copy the <strong className="text-foreground">Client ID</strong> and{" "}
+              <strong className="text-foreground">Client Secret</strong> from your Zoom app.
+            </li>
+            <li>
+              Add them to your environment (Lovable project settings or <code className="text-xs">.env</code>):
+              <pre className="mt-1.5 rounded-md border border-border bg-muted px-3 py-2 text-xs leading-relaxed">
+{`ZOOM_CLIENT_ID="your_client_id_here"
+ZOOM_CLIENT_SECRET="your_client_secret_here"
+PUBLIC_SITE_URL="${window.location.origin}"`}
+              </pre>
+            </li>
+            <li>Redeploy or restart the server, then click <strong className="text-foreground">Connect Zoom</strong> below.</li>
+          </ol>
+          <div className="flex gap-2 pt-1">
+            <Button
+              onClick={() => connect.mutate()}
+              disabled={connect.isPending}
+              size="sm"
+            >
+              <LinkIcon className="mr-1.5 h-3.5 w-3.5" />
+              {connect.isPending ? "Redirecting…" : "Connect Zoom"}
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => setNotConfigured(false)}>
+              Dismiss
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  // ── Default — not connected ───────────────────────────────────────────────
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2"><Video className="h-5 w-5 text-program" /> Zoom integration</CardTitle>
+        <CardTitle className="flex items-center gap-2">
+          <Video className="h-5 w-5 text-program" /> Zoom integration
+        </CardTitle>
         <CardDescription>
-          {isLoading ? "Loading…" : conn
-            ? `Connected as ${conn.zoom_email ?? "your Zoom account"}.`
+          {isLoading
+            ? "Checking connection…"
             : "Connect your Zoom account to auto-create meetings for sessions."}
         </CardDescription>
       </CardHeader>
-      <CardContent className="flex flex-wrap gap-2">
-        {!conn ? (
-          <Button onClick={() => connect.mutate()} disabled={connect.isPending}>
-            <LinkIcon className="mr-1.5 h-4 w-4" /> {connect.isPending ? "Redirecting…" : "Connect Zoom"}
-          </Button>
-        ) : (
-          <Button variant="outline" onClick={() => disconnect.mutate()} disabled={disconnect.isPending}>
-            <Unlink className="mr-1.5 h-4 w-4" /> Disconnect Zoom
-          </Button>
-        )}
+      <CardContent>
+        <Button onClick={() => connect.mutate()} disabled={connect.isPending || isLoading}>
+          <LinkIcon className="mr-1.5 h-4 w-4" />
+          {connect.isPending ? "Redirecting to Zoom…" : "Connect Zoom"}
+        </Button>
       </CardContent>
     </Card>
   );
