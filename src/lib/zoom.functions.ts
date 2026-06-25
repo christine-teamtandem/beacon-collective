@@ -6,13 +6,6 @@ const ZOOM_AUTH = "https://zoom.us/oauth/authorize";
 const ZOOM_TOKEN = "https://zoom.us/oauth/token";
 const ZOOM_API = "https://api.zoom.us/v2";
 
-function siteUrl() {
-  return process.env.PUBLIC_SITE_URL || "https://mentorship.freebleeders.org";
-}
-function redirectUri() {
-  return `${siteUrl()}/api/public/zoom/callback`;
-}
-
 export const getZoomConnection = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
@@ -27,8 +20,15 @@ export const getZoomConnection = createServerFn({ method: "GET" })
 export const getZoomAuthUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const clientId = process.env.ZOOM_CLIENT_ID;
-    if (!clientId) throw new Error("ZOOM_CLIENT_ID is not configured.");
+    const { getZoomCredentials, getZoomRedirectUri } = await import("@/lib/config.server");
+    const { clientId, clientSecret } = getZoomCredentials();
+    // Validate BOTH up front — otherwise the user authorizes on Zoom and only
+    // then hits a confusing "Token exchange failed" page in the callback.
+    const missing = [!clientId && "ZOOM_CLIENT_ID", !clientSecret && "ZOOM_CLIENT_SECRET"].filter(Boolean);
+    if (missing.length) {
+      throw new Error(`Zoom is not configured: ${missing.join(" and ")} not set.`);
+    }
+
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const state = crypto.randomUUID();
     const { error } = await supabaseAdmin
@@ -36,13 +36,14 @@ export const getZoomAuthUrl = createServerFn({ method: "POST" })
       .insert({ state, user_id: context.userId });
     if (error) throw new Error(error.message);
 
+    const redirectUri = getZoomRedirectUri();
     const params = new URLSearchParams({
       response_type: "code",
       client_id: clientId,
-      redirect_uri: redirectUri(),
+      redirect_uri: redirectUri,
       state,
     });
-    return { url: `${ZOOM_AUTH}?${params.toString()}` };
+    return { url: `${ZOOM_AUTH}?${params.toString()}`, redirectUri };
   });
 
 export const disconnectZoom = createServerFn({ method: "POST" })
@@ -66,8 +67,8 @@ async function refreshIfNeeded(userId: string) {
   if (!conn) throw new Error("Zoom is not connected. Click Connect Zoom first.");
   if (new Date(conn.expires_at).getTime() - 60_000 > Date.now()) return conn;
 
-  const clientId = process.env.ZOOM_CLIENT_ID!;
-  const clientSecret = process.env.ZOOM_CLIENT_SECRET!;
+  const { getZoomCredentials } = await import("@/lib/config.server");
+  const { clientId, clientSecret } = getZoomCredentials();
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   const res = await fetch(ZOOM_TOKEN, {
     method: "POST",

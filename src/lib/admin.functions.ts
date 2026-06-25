@@ -290,8 +290,8 @@ export const runApiDiagnostics = createServerFn({ method: "POST" })
     });
 
     // ── 2. Zoom ──────────────────────────────────────────────────────────────
-    const zoomId = process.env.ZOOM_CLIENT_ID;
-    const zoomSecret = process.env.ZOOM_CLIENT_SECRET;
+    const { getZoomCredentials, getZoomRedirectUri, getSiteUrl: getZoomSiteUrl } = await import("@/lib/config.server");
+    const { clientId: zoomId, clientSecret: zoomSecret } = getZoomCredentials();
     const missing = [!zoomId && "ZOOM_CLIENT_ID", !zoomSecret && "ZOOM_CLIENT_SECRET"].filter(Boolean);
     if (missing.length) {
       checks.push({
@@ -305,17 +305,17 @@ export const runApiDiagnostics = createServerFn({ method: "POST" })
         name: "Zoom OAuth", category: "Zoom",
         status: "ok",
         message: "ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET configured",
-        detail: `Client ID: ${zoomId!.slice(0, 8)}...`,
+        detail: `Client ID: ${zoomId.slice(0, 8)}… · Register this redirect URI in Zoom: ${getZoomRedirectUri()}`,
       });
     }
 
-    const siteUrl = process.env.PUBLIC_SITE_URL || process.env.VITE_PUBLIC_SITE_URL;
+    const rawSiteUrl = process.env.PUBLIC_SITE_URL || process.env.VITE_PUBLIC_SITE_URL;
     checks.push({
       name: "PUBLIC_SITE_URL", category: "Zoom",
-      status: siteUrl ? "ok" : "warning",
-      message: siteUrl || "Not set (using hardcoded default)",
-      detail: siteUrl
-        ? "Zoom OAuth redirect URI will use this value"
+      status: rawSiteUrl ? "ok" : "warning",
+      message: getZoomSiteUrl(),
+      detail: rawSiteUrl
+        ? "Zoom OAuth redirect URI is built from this value"
         : "Set PUBLIC_SITE_URL=https://mentorship.freebleeders.org in Lovable settings",
     });
 

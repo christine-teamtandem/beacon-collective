@@ -18,7 +18,10 @@ import { getZoomConnection, getZoomAuthUrl, disconnectZoom, createZoomMeetingFor
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
-  validateSearch: (s: Record<string, unknown>) => ({ zoom: typeof s.zoom === "string" ? s.zoom : undefined }),
+  validateSearch: (s: Record<string, unknown>) => ({
+    zoom: typeof s.zoom === "string" ? s.zoom : undefined,
+    reason: typeof s.reason === "string" ? s.reason : undefined,
+  }),
 });
 
 function CalendarPage() {
@@ -206,10 +209,14 @@ function ZoomConnectionCard() {
     if (search.zoom === "connected") {
       toast.success("Zoom connected successfully!");
       setNotConfigured(false);
+      qc.invalidateQueries({ queryKey: ["zoom-conn"] });
     } else if (search.zoom === "error") {
-      toast.error("Zoom OAuth failed — check that your redirect URI matches exactly in the Zoom app settings.");
+      toast.error(search.reason || "Zoom OAuth failed — check that your redirect URI matches exactly in the Zoom app settings.", { duration: 8000 });
+      if (search.reason && /not configured|client id|client secret/i.test(search.reason)) {
+        setNotConfigured(true);
+      }
     }
-  }, [search.zoom]);
+  }, [search.zoom, search.reason, qc]);
 
   const connect = useMutation({
     mutationFn: async () => (getAuthFn as any)({}),

@@ -54,3 +54,25 @@ export function getResendFrom(): string {
     "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>"
   );
 }
+
+/** Public site URL, sanitized and without a trailing slash. */
+export function getSiteUrl(): string {
+  const raw =
+    sanitizeEnv(process.env.PUBLIC_SITE_URL) ||
+    sanitizeEnv(process.env.VITE_PUBLIC_SITE_URL) ||
+    "https://mentorship.freebleeders.org";
+  return raw.replace(/\/+$/, "");
+}
+
+/** The exact Zoom OAuth redirect URI — must match the Zoom app config byte-for-byte. */
+export function getZoomRedirectUri(): string {
+  return `${getSiteUrl()}/api/public/zoom/callback`;
+}
+
+/** Sanitized Zoom OAuth credentials. */
+export function getZoomCredentials(): { clientId: string; clientSecret: string } {
+  return {
+    clientId: sanitizeEnv(process.env.ZOOM_CLIENT_ID),
+    clientSecret: sanitizeEnv(process.env.ZOOM_CLIENT_SECRET),
+  };
+}

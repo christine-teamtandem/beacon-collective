@@ -35,8 +35,8 @@ export async function getValidZoomConnection(userId: string): Promise<ZoomConnec
     return conn as ZoomConnection;
   }
 
-  const clientId = process.env.ZOOM_CLIENT_ID!;
-  const clientSecret = process.env.ZOOM_CLIENT_SECRET!;
+  const { getZoomCredentials } = await import("@/lib/config.server");
+  const { clientId, clientSecret } = getZoomCredentials();
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   const res = await fetch(ZOOM_TOKEN, {
     method: "POST",

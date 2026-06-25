@@ -1,9 +1,14 @@
-import { createFileRoute, redirect } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 
 const ZOOM_TOKEN = "https://zoom.us/oauth/token";
 
-function siteUrl() {
-  return process.env.PUBLIC_SITE_URL || "https://mentorship.freebleeders.org";
+/** Redirect back to the calendar with a short, human-readable reason. */
+function backToCalendar(reason: string) {
+  const params = new URLSearchParams({ zoom: "error", reason });
+  return new Response(null, {
+    status: 302,
+    headers: { Location: `/calendar?${params.toString()}` },
+  });
 }
 
 export const Route = createFileRoute("/api/public/zoom/callback")({
@@ -16,30 +21,32 @@ export const Route = createFileRoute("/api/public/zoom/callback")({
         const errorParam = url.searchParams.get("error");
 
         if (errorParam) {
-          throw redirect({ to: "/calendar", search: { zoom: "error" } as any });
+          return backToCalendar(url.searchParams.get("error_description") || errorParam);
         }
         if (!code || !state) {
-          return new Response("Missing code/state", { status: 400 });
+          return backToCalendar("Missing authorization code from Zoom.");
         }
 
         const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+        const { getZoomCredentials, getZoomRedirectUri } = await import("@/lib/config.server");
+
         const { data: stateRow, error: stErr } = await supabaseAdmin
           .from("zoom_oauth_states")
           .select("user_id, created_at")
           .eq("state", state)
           .maybeSingle();
-        if (stErr || !stateRow) return new Response("Invalid state", { status: 400 });
+        if (stErr || !stateRow) return backToCalendar("Invalid or already-used sign-in state. Please try connecting again.");
 
         // Reject states older than 15 min
         if (Date.now() - new Date(stateRow.created_at).getTime() > 15 * 60_000) {
-          return new Response("State expired", { status: 400 });
+          await supabaseAdmin.from("zoom_oauth_states").delete().eq("state", state);
+          return backToCalendar("Sign-in window expired. Please click Connect Zoom again.");
         }
         await supabaseAdmin.from("zoom_oauth_states").delete().eq("state", state);
 
-        const clientId = process.env.ZOOM_CLIENT_ID;
-        const clientSecret = process.env.ZOOM_CLIENT_SECRET;
+        const { clientId, clientSecret } = getZoomCredentials();
         if (!clientId || !clientSecret) {
-          return new Response("Zoom not configured", { status: 500 });
+          return backToCalendar("Zoom is not configured (missing client ID or secret).");
         }
 
         const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
@@ -52,13 +59,24 @@ export const Route = createFileRoute("/api/public/zoom/callback")({
           body: new URLSearchParams({
             grant_type: "authorization_code",
             code,
-            redirect_uri: `${siteUrl()}/api/public/zoom/callback`,
+            redirect_uri: getZoomRedirectUri(),
           }),
         });
         if (!tokenRes.ok) {
           const t = await tokenRes.text();
           console.error("Zoom token exchange failed", t);
-          return new Response("Token exchange failed", { status: 500 });
+          let reason = "Token exchange failed.";
+          try {
+            const j = JSON.parse(t) as { reason?: string; error?: string };
+            if (j.reason === "Invalid client_id or client_secret" || j.error === "invalid_client") {
+              reason = "Invalid Zoom client ID or secret — check the values in Lovable settings.";
+            } else if (/redirect/i.test(t)) {
+              reason = `Redirect URI mismatch. Register exactly: ${getZoomRedirectUri()} in your Zoom app.`;
+            } else if (j.reason) {
+              reason = j.reason;
+            }
+          } catch { /* keep default */ }
+          return backToCalendar(reason);
         }
         const tok = await tokenRes.json();
 
@@ -90,7 +108,7 @@ export const Route = createFileRoute("/api/public/zoom/callback")({
           }, { onConflict: "user_id" });
         if (upErr) {
           console.error("zoom_connections upsert failed", upErr);
-          return new Response("Failed to store connection", { status: 500 });
+          return backToCalendar("Connected to Zoom, but failed to save the connection. Please try again.");
         }
 
         return new Response(null, { status: 302, headers: { Location: "/calendar?zoom=connected" } });
