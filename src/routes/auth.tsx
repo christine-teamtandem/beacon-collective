@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, useRouter, Link } from "@tanstack/react-router";
 import { useState } from "react";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
@@ -7,10 +7,26 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
-import { Shield } from "lucide-react";
-import { lovable } from "@/integrations/lovable";
+import { Shield, AlertTriangle } from "lucide-react";
 
 const searchSchema = z.object({ program: z.enum(["vanguard", "flow"]).optional() });
+
+function AuthErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4 text-center">
+      <AlertTriangle className="h-10 w-10 text-amber-500" />
+      <h1 className="font-display text-xl font-semibold">Sign-in page hit a snag</h1>
+      <p className="max-w-sm text-sm text-muted-foreground">
+        {error?.message || "An unexpected error occurred while loading the sign-in page."}
+      </p>
+      <div className="flex gap-2">
+        <Button onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+        <Button variant="outline" onClick={() => router.navigate({ to: "/" })}>Go home</Button>
+      </div>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
@@ -21,6 +37,7 @@ export const Route = createFileRoute("/auth")({
     ],
   }),
   component: AuthPage,
+  errorComponent: AuthErrorFallback,
 });
 
 function AuthPage() {
@@ -77,16 +94,21 @@ function AuthPage() {
               variant="outline"
               className="w-full font-semibold"
               onClick={async () => {
-                const result = await lovable.auth.signInWithOAuth("google", {
-                  redirect_uri: window.location.origin,
-                });
-                if (result.error) {
-                  toast.error(result.error.message ?? "Google sign-in failed");
-                  return;
+                try {
+                  const { lovable } = await import("@/integrations/lovable");
+                  const result = await lovable.auth.signInWithOAuth("google", {
+                    redirect_uri: window.location.origin,
+                  });
+                  if (result.error) {
+                    toast.error(result.error.message ?? "Google sign-in failed");
+                    return;
+                  }
+                  if (result.redirected) return;
+                  toast.success("Welcome!");
+                  navigate({ to: "/dashboard" });
+                } catch (e) {
+                  toast.error(e instanceof Error ? e.message : "Google sign-in is unavailable right now.");
                 }
-                if (result.redirected) return;
-                toast.success("Welcome!");
-                navigate({ to: "/dashboard" });
               }}
             >
               <svg className="h-4 w-4 mr-2" viewBox="0 0 48 48" aria-hidden="true">
