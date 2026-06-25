@@ -31,15 +31,34 @@ export interface ViewAs {
 const VIEW_AS_KEY = "lovable.viewAs";
 const VIEW_AS_EVENT = "lovable:viewAs";
 
+// useSyncExternalStore compares snapshots with Object.is. JSON.parse returns a
+// new object every call, which makes React think the store changed on every
+// render → "Maximum update depth exceeded". Cache by the raw string so we hand
+// back a STABLE reference unless the underlying localStorage value changes.
+let _viewAsRawCache: string | null = null;
+let _viewAsValueCache: ViewAs | null = null;
+
 function readViewAs(): ViewAs | null {
   if (typeof window === "undefined") return null;
+  let raw: string | null = null;
   try {
-    const raw = localStorage.getItem(VIEW_AS_KEY);
-    if (!raw) return null;
+    raw = localStorage.getItem(VIEW_AS_KEY);
+  } catch {
+    return null;
+  }
+  if (raw === _viewAsRawCache) return _viewAsValueCache;
+  _viewAsRawCache = raw;
+  if (!raw) {
+    _viewAsValueCache = null;
+    return null;
+  }
+  try {
     const v = JSON.parse(raw) as ViewAs;
-    if (!v || !v.role) return null;
-    return v;
-  } catch { return null; }
+    _viewAsValueCache = v && v.role ? v : null;
+  } catch {
+    _viewAsValueCache = null;
+  }
+  return _viewAsValueCache;
 }
 
 function subscribeViewAs(cb: () => void) {
