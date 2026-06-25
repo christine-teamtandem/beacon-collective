@@ -17,6 +17,22 @@ export const getZoomConnection = createServerFn({ method: "GET" })
     return { connection: data ?? null };
   });
 
+/**
+ * Side-effect-free setup info for the UI: the EXACT redirect URI the server
+ * will send to Zoom, plus whether credentials are present. The card shows this
+ * so users register the same string the server uses (prevents error 4,700).
+ */
+export const getZoomSetupInfo = createServerFn({ method: "GET" })
+  .middleware([requireSupabaseAuth])
+  .handler(async () => {
+    const { getZoomCredentials, getZoomRedirectUri } = await import("@/lib/config.server");
+    const { clientId, clientSecret } = getZoomCredentials();
+    return {
+      redirectUri: getZoomRedirectUri(),
+      configured: Boolean(clientId && clientSecret),
+    };
+  });
+
 export const getZoomAuthUrl = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {

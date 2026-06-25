@@ -14,7 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar as CalIcon, Video, Plus, Trash2, Link as LinkIcon, Unlink, AlertTriangle, ExternalLink, Copy, CheckCheck } from "lucide-react";
 import { format, isAfter, addMinutes, subMinutes } from "date-fns";
 import { toast } from "sonner";
-import { getZoomConnection, getZoomAuthUrl, disconnectZoom, createZoomMeetingForSession } from "@/lib/zoom.functions";
+import { getZoomConnection, getZoomAuthUrl, getZoomSetupInfo, disconnectZoom, createZoomMeetingForSession } from "@/lib/zoom.functions";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
@@ -194,6 +194,7 @@ function ZoomConnectionCard() {
   const qc = useQueryClient();
   const getConnFn    = useServerFn(getZoomConnection);
   const getAuthFn    = useServerFn(getZoomAuthUrl);
+  const setupInfoFn  = useServerFn(getZoomSetupInfo);
   const disconnectFn = useServerFn(disconnectZoom);
   const search = useSearch({ from: "/_authenticated/calendar" });
 
@@ -203,6 +204,10 @@ function ZoomConnectionCard() {
   const { data, isLoading } = useQuery({
     queryKey: ["zoom-conn"],
     queryFn: () => (getConnFn as any)({}),
+  });
+  const setupQuery = useQuery({
+    queryKey: ["zoom-setup"],
+    queryFn: () => (setupInfoFn as any)({}),
   });
 
   useEffect(() => {
@@ -240,7 +245,11 @@ function ZoomConnectionCard() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const callbackUrl = `${window.location.origin}/api/public/zoom/callback`;
+  // Prefer the server-authoritative redirect URI (built from PUBLIC_SITE_URL) so
+  // users register the exact string the server sends to Zoom. Fall back to the
+  // browser origin only until the query resolves.
+  const callbackUrl =
+    setupQuery.data?.redirectUri || `${window.location.origin}/api/public/zoom/callback`;
 
   const copyUrl = () => {
     navigator.clipboard.writeText(callbackUrl).then(() => {
@@ -362,11 +371,28 @@ PUBLIC_SITE_URL="${window.location.origin}"`}
             : "Connect your Zoom account to auto-create meetings for sessions."}
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="space-y-3">
         <Button onClick={() => connect.mutate()} disabled={connect.isPending || isLoading}>
           <LinkIcon className="mr-1.5 h-4 w-4" />
           {connect.isPending ? "Redirecting to Zoom…" : "Connect Zoom"}
         </Button>
+        <div className="rounded-md border border-border bg-muted/50 p-3 text-xs">
+          <p className="mb-1.5 text-muted-foreground">
+            Getting an <span className="font-semibold text-foreground">"Invalid redirect (4,700)"</span> error?
+            Register this <em>exact</em> URL in your Zoom app (Redirect URL for OAuth <em>and</em> OAuth Allow List):
+          </p>
+          <div className="flex items-center gap-2 rounded border border-border bg-background px-2 py-1.5 font-mono">
+            <span className="flex-1 break-all">{callbackUrl}</span>
+            <button
+              type="button"
+              onClick={copyUrl}
+              className="shrink-0 text-muted-foreground hover:text-foreground"
+              aria-label="Copy redirect URL"
+            >
+              {copied ? <CheckCheck className="h-3.5 w-3.5 text-green-500" /> : <Copy className="h-3.5 w-3.5" />}
+            </button>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );
