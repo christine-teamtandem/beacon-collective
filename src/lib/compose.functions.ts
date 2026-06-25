@@ -318,33 +318,96 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
     const html = await render(element);
     const text = await render(element, { plainText: true });
 
+    const resendApiKey = process.env.RESEND_API_KEY;
+    const fromAddress =
+      process.env.RESEND_FROM_EMAIL ||
+      "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>";
+
     const stamp = Date.now();
     const results: { id: string; email: string | undefined; ok: boolean; reason?: string }[] = [];
+
     for (const r of recipientUsers) {
       if (!r.email) { results.push({ ...r, ok: false, reason: "no email" }); continue; }
       const messageId = `compose-${context.userId}-${stamp}-${r.id}`;
-      await supabaseAdmin.from("email_send_log").insert({
-        message_id: messageId,
-        template_name: "composed-message",
-        recipient_email: r.email,
-        status: "pending",
-      });
-      const { error } = await supabaseAdmin.rpc("enqueue_email", {
-        queue_name: "transactional_emails",
-        payload: {
+
+      if (resendApiKey) {
+        // ── Direct Resend delivery (preferred when RESEND_API_KEY is set) ──
+        try {
+          const resendRes = await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${resendApiKey}`,
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              from: fromAddress,
+              to: [r.email],
+              subject: data.subject,
+              html,
+              text,
+              headers: { "X-Message-ID": messageId },
+            }),
+          });
+
+          let status: "sent" | "failed";
+          let errorMsg: string | undefined;
+
+          if (resendRes.ok) {
+            status = "sent";
+          } else {
+            status = "failed";
+            const body = await resendRes.json().catch(() => ({})) as Record<string, unknown>;
+            errorMsg =
+              (body?.message as string) ||
+              (body?.error as string) ||
+              `Resend HTTP ${resendRes.status}`;
+          }
+
+          await supabaseAdmin.from("email_send_log").insert({
+            message_id: messageId,
+            template_name: "composed-message",
+            recipient_email: r.email,
+            status,
+            error_message: errorMsg ?? null,
+          });
+
+          results.push({ ...r, ok: status === "sent", reason: errorMsg });
+        } catch (err) {
+          const msg = err instanceof Error ? err.message : String(err);
+          await supabaseAdmin.from("email_send_log").insert({
+            message_id: messageId,
+            template_name: "composed-message",
+            recipient_email: r.email,
+            status: "failed",
+            error_message: msg.slice(0, 500),
+          });
+          results.push({ ...r, ok: false, reason: msg });
+        }
+      } else {
+        // ── Queue-based fallback (Lovable Cloud pipeline) ──
+        await supabaseAdmin.from("email_send_log").insert({
           message_id: messageId,
-          to: r.email,
-          from: "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>",
-          sender_domain: "notify.mentorship.freebleeders.org",
-          subject: data.subject,
-          html, text,
-          purpose: "transactional",
-          label: "composed-message",
-          idempotency_key: messageId,
-          queued_at: new Date().toISOString(),
-        },
-      });
-      results.push({ ...r, ok: !error, reason: error?.message });
+          template_name: "composed-message",
+          recipient_email: r.email,
+          status: "pending",
+        });
+        const { error } = await supabaseAdmin.rpc("enqueue_email", {
+          queue_name: "transactional_emails",
+          payload: {
+            message_id: messageId,
+            to: r.email,
+            from: fromAddress,
+            sender_domain: "notify.mentorship.freebleeders.org",
+            subject: data.subject,
+            html, text,
+            purpose: "transactional",
+            label: "composed-message",
+            idempotency_key: messageId,
+            queued_at: new Date().toISOString(),
+          },
+        });
+        results.push({ ...r, ok: !error, reason: error?.message });
+      }
     }
 
     return { sent: results.filter((r) => r.ok).length, total: results.length, results };
@@ -359,35 +422,52 @@ export const listSentEmails = createServerFn({ method: "POST" })
       .select("message_id, recipient_email, status, template_name, created_at, error_message")
       .like("message_id", `compose-${context.userId}-%`)
       .order("created_at", { ascending: false })
-      .limit(200);
+      .limit(600); // fetch more rows since multiple rows per recipient are possible
     if (error) throw new Error(error.message);
 
-    // Group by send-batch stamp embedded in message_id: compose-<uid>-<stamp>-<rid>
-    const groups = new Map<string, { stamp: string; createdAt: string; rows: typeof data }>();
+    // Group all rows by batch stamp (embedded in message_id: compose-<uid>-<stamp>-<rid>)
+    type Row = { message_id: string | null; recipient_email: string | null; status: string; created_at: string; error_message: string | null };
+    const groups = new Map<string, { stamp: string; createdAt: string; rows: Row[] }>();
     (data ?? []).forEach((row) => {
       if (!row.message_id) return;
       const parts = row.message_id.split("-");
-      const stamp = parts[parts.length - 6] ?? "0";
-      const g = groups.get(stamp) ?? { stamp, createdAt: row.created_at, rows: [] as any };
-      g.rows.push(row);
+      // message_id = compose(1) + userId UUID(5) + stamp(1) + recipientId UUID(5) = 12 parts
+      const stamp = parts[6] ?? parts[parts.length - 6] ?? "0";
+      const g = groups.get(stamp) ?? { stamp, createdAt: row.created_at, rows: [] };
+      g.rows.push(row as Row);
       if (row.created_at < g.createdAt) g.createdAt = row.created_at;
       groups.set(stamp, g);
     });
 
     const batches = Array.from(groups.values())
-      .map((g) => ({
-        stamp: g.stamp,
-        createdAt: g.createdAt,
-        total: g.rows.length,
-        sent: g.rows.filter((r: any) => r.status === "sent").length,
-        pending: g.rows.filter((r: any) => r.status === "pending").length,
-        failed: g.rows.filter((r: any) => r.status === "failed" || r.status === "dlq").length,
-        recipients: g.rows.map((r: any) => ({
-          email: r.recipient_email,
-          status: r.status,
-          error: r.error_message,
-        })),
-      }))
+      .map((g) => {
+        // Deduplicate per recipient — keep the most terminal status
+        // Priority: sent > failed > dlq > pending
+        const priority = (s: string) => s === "sent" ? 3 : s === "failed" ? 2 : s === "dlq" ? 2 : 1;
+        const byEmail = new Map<string, Row>();
+        for (const row of g.rows) {
+          const key = row.recipient_email ?? row.message_id ?? "";
+          const existing = byEmail.get(key);
+          if (!existing || priority(row.status) > priority(existing.status)) {
+            byEmail.set(key, row);
+          }
+        }
+        const deduped = Array.from(byEmail.values());
+
+        return {
+          stamp: g.stamp,
+          createdAt: g.createdAt,
+          total: deduped.length,
+          sent:    deduped.filter((r) => r.status === "sent").length,
+          pending: deduped.filter((r) => r.status === "pending").length,
+          failed:  deduped.filter((r) => r.status === "failed" || r.status === "dlq").length,
+          recipients: deduped.map((r) => ({
+            email: r.recipient_email,
+            status: r.status,
+            error: r.error_message,
+          })),
+        };
+      })
       .sort((a, b) => (a.createdAt < b.createdAt ? 1 : -1));
 
     return { batches };

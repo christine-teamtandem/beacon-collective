@@ -806,70 +806,117 @@ function ComposePage() {
                 </Button>}
               />
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-left text-xs uppercase tracking-wider text-muted-foreground">
-                      <th className="pb-3 pr-4 font-semibold">Subject / Batch</th>
-                      <th className="pb-3 pr-4 font-semibold">Recipients</th>
-                      <th className="pb-3 pr-4 font-semibold">Date Sent</th>
-                      <th className="pb-3 font-semibold">Status</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-border">
-                    {sentQuery.data.batches.map((b: any) => (
-                      <tr key={b.stamp} className="align-top">
-                        <td className="py-3 pr-4">
-                          <p className="font-medium text-foreground">
-                            {b.recipients[0]?.email
-                              ? `Campaign · ${b.total} recipients`
-                              : "Campaign"}
-                          </p>
-                          <div className="mt-1 flex flex-wrap gap-1">
-                            {b.recipients.slice(0, 4).map((r: any, i: number) => (
-                              <Badge
-                                key={`${r.email}-${i}`}
-                                variant="outline"
-                                className="text-[10px] py-0"
-                                title={r.error ?? r.status}
-                              >
-                                {r.email}
-                              </Badge>
-                            ))}
-                            {b.recipients.length > 4 && (
-                              <span className="text-[11px] text-muted-foreground">
-                                +{b.recipients.length - 4} more
-                              </span>
-                            )}
-                          </div>
-                        </td>
-                        <td className="py-3 pr-4 font-medium">{b.total}</td>
-                        <td className="py-3 pr-4 text-muted-foreground">
-                          {new Date(b.createdAt).toLocaleString()}
-                        </td>
-                        <td className="py-3">
-                          <div className="flex flex-wrap gap-1">
-                            {b.sent > 0 && (
-                              <Badge className="bg-green-600/15 text-green-700 hover:bg-green-600/20 dark:text-green-400 text-[10px]">
-                                {b.sent} sent
-                              </Badge>
-                            )}
-                            {b.pending > 0 && (
-                              <Badge variant="secondary" className="text-[10px]">{b.pending} pending</Badge>
-                            )}
-                            {b.failed > 0 && (
-                              <Badge variant="destructive" className="text-[10px]">{b.failed} failed</Badge>
-                            )}
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div className="space-y-4">
+                {sentQuery.data.batches.map((b: any) => (
+                  <SentBatchCard key={b.stamp} batch={b} />
+                ))}
               </div>
             )}
           </CardContent>
         </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Sent batch card ───────────────────────────────────────────────────────────
+
+function SentBatchCard({ batch }: { batch: any }) {
+  const [expanded, setExpanded] = useState(false);
+  const failed  = batch.recipients.filter((r: any) => r.status === "failed" || r.status === "dlq");
+  const sent    = batch.recipients.filter((r: any) => r.status === "sent");
+  const pending = batch.recipients.filter((r: any) => r.status === "pending");
+  const hasErrors = failed.length > 0;
+
+  return (
+    <div className={`rounded-lg border ${hasErrors ? "border-destructive/40" : "border-border"} bg-card`}>
+      {/* Header row */}
+      <div className="flex flex-wrap items-start justify-between gap-3 p-4">
+        <div className="min-w-0 flex-1">
+          <p className="font-semibold">
+            Campaign &middot; {batch.total} recipient{batch.total === 1 ? "" : "s"}
+          </p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {new Date(batch.createdAt).toLocaleString()}
+          </p>
+        </div>
+        <div className="flex flex-wrap items-center gap-1.5">
+          {sent.length > 0 && (
+            <Badge className="bg-green-600/15 text-green-700 dark:text-green-400 text-[10px]">
+              ✓ {sent.length} sent
+            </Badge>
+          )}
+          {pending.length > 0 && (
+            <Badge variant="secondary" className="text-[10px]">
+              ⏳ {pending.length} pending
+            </Badge>
+          )}
+          {failed.length > 0 && (
+            <Badge variant="destructive" className="text-[10px]">
+              ✕ {failed.length} failed
+            </Badge>
+          )}
+          <button
+            type="button"
+            onClick={() => setExpanded((v) => !v)}
+            className="ml-1 text-xs text-muted-foreground underline underline-offset-2 hover:text-foreground"
+          >
+            {expanded ? "Hide" : "Details"}
+          </button>
+        </div>
+      </div>
+
+      {/* Inline error summary — always visible when there are failures */}
+      {hasErrors && !expanded && (
+        <div className="mx-4 mb-4 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-2">
+          <p className="text-xs font-semibold text-destructive mb-1">
+            {failed.length} recipient{failed.length === 1 ? "" : "s"} failed
+          </p>
+          {/* Show the first unique error message */}
+          {failed[0]?.error && (
+            <p className="text-xs text-muted-foreground font-mono break-all">
+              {failed[0].error}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Expanded: per-recipient detail table */}
+      {expanded && (
+        <div className="border-t border-border px-4 pb-4 pt-3">
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-border text-left text-[11px] uppercase tracking-wider text-muted-foreground">
+                  <th className="pb-2 pr-4 font-semibold">Recipient</th>
+                  <th className="pb-2 pr-4 font-semibold">Status</th>
+                  <th className="pb-2 font-semibold">Error / Detail</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {batch.recipients.map((r: any, i: number) => (
+                  <tr key={`${r.email}-${i}`} className="align-top">
+                    <td className="py-2 pr-4 font-mono">{r.email}</td>
+                    <td className="py-2 pr-4">
+                      {r.status === "sent" && (
+                        <span className="font-semibold text-green-600 dark:text-green-400">Sent</span>
+                      )}
+                      {(r.status === "failed" || r.status === "dlq") && (
+                        <span className="font-semibold text-destructive">Failed</span>
+                      )}
+                      {r.status === "pending" && (
+                        <span className="text-muted-foreground">Pending</span>
+                      )}
+                    </td>
+                    <td className="py-2 text-muted-foreground break-all">
+                      {r.error || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
     </div>
   );
