@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
   Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck,
-  Mail, UserCircle2, ChevronRight, Send, Clock, History, CalendarClock,
+  Mail, UserCircle2, ChevronRight, Send, Clock, History, CalendarClock, LayoutTemplate,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
@@ -229,6 +229,14 @@ export function AppSidebar() {
                               </SidebarMenuSubButton>
                             </SidebarMenuSubItem>
                           ))}
+                          <SidebarMenuSubItem>
+                            <SidebarMenuSubButton asChild isActive={pathname === "/templates"}>
+                              <Link to="/templates" onClick={closeMobile} className="flex items-center gap-2">
+                                <LayoutTemplate className="h-3.5 w-3.5" />
+                                <span>Templates</span>
+                              </Link>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </Collapsible>

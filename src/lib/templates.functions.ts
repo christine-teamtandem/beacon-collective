@@ -178,6 +178,30 @@ export const generateTemplateFromPrompt = createServerFn({ method: "POST" })
     return { html };
   });
 
+const RewriteTextInput = z.object({
+  text: z.string().min(1).max(8000),
+  instruction: z.string().trim().min(1).max(2000),
+});
+
+/** Rewrite a single block's copy. Returns plain text (no HTML), for block-level edits. */
+export const rewriteText = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => RewriteTextInput.parse(d))
+  .handler(async ({ data }) => {
+    const out = await callGateway({
+      model: TEXT_MODEL,
+      messages: [
+        {
+          role: "system",
+          content:
+            "You are an expert email copywriter for Freebleeders Mentorship Hub (warm, purposeful, elevated). Rewrite the given text per the instruction. Keep {{first_name}} placeholders intact. Return ONLY the rewritten plain text — no quotes, no markdown, no commentary.",
+        },
+        { role: "user", content: `Text:\n${data.text}\n\nInstruction: ${data.instruction}` },
+      ],
+    });
+    return { text: out.replace(/^["'\s]+|["'\s]+$/g, "") };
+  });
+
 const RewriteInput = z.object({
   html: z.string().min(1).max(200_000),
   instruction: z.string().trim().min(1).max(2000),
