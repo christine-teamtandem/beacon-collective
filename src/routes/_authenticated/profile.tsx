@@ -1,6 +1,6 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
-import { useForm } from "react-hook-form";
+import { createFileRoute, useRouter } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { toast } from "sonner";
@@ -17,10 +17,30 @@ import { Badge } from "@/components/ui/badge";
 import {
   Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage,
 } from "@/components/ui/form";
-import { Loader2, Upload, Sparkles, MapPin, Mail, Cake, Heart, Target, Lightbulb } from "lucide-react";
+import { Loader2, Upload, Sparkles, MapPin, Mail, Cake, Heart, Target, Lightbulb, AlertTriangle } from "lucide-react";
+
+// Route-level error boundary — catches any render crash specific to this page
+// and shows a friendly recovery UI without touching the root error boundary.
+function ProfileErrorFallback({ error, reset }: { error: Error; reset: () => void }) {
+  const router = useRouter();
+  return (
+    <div className="flex flex-col items-center gap-4 py-20 text-center">
+      <AlertTriangle className="h-10 w-10 text-amber-500" />
+      <h2 className="text-lg font-semibold">Could not load your portfolio</h2>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        {error?.message || "An unexpected error occurred. Please try again."}
+      </p>
+      <div className="flex gap-2">
+        <Button onClick={() => { router.invalidate(); reset(); }}>Try again</Button>
+        <Button variant="outline" onClick={() => router.navigate({ to: "/dashboard" })}>Go to dashboard</Button>
+      </div>
+    </div>
+  );
+}
 
 export const Route = createFileRoute("/_authenticated/profile")({
   component: ProfilePage,
+  errorComponent: ProfileErrorFallback,
 });
 
 const portfolioSchema = z.object({
@@ -37,15 +57,41 @@ const portfolioSchema = z.object({
 
 type PortfolioForm = z.infer<typeof portfolioSchema>;
 
+const DEFAULT_VALUES: PortfolioForm = {
+  full_name: "", email: "", birthday: "", address: "", avatar_url: "",
+  hobbies: "", favorites: "", goals: "", fun_facts: "",
+};
+
 function ProfilePage() {
   const { user, role, fullName, loading } = useUserContext();
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
 
-  const { data: profile, isLoading, isPending, isError, error: queryError } = useQuery({
-    enabled: !!user,
+  const form = useForm<PortfolioForm>({
+    resolver: zodResolver(portfolioSchema),
+    defaultValues: DEFAULT_VALUES,
+  });
+
+  // useWatch — the correct RHF hook for subscribing to field values in render
+  const avatarUrl   = useWatch({ control: form.control, name: "avatar_url", defaultValue: "" });
+  const watchedName = useWatch({ control: form.control, name: "full_name",  defaultValue: "" });
+  const watchedEmail    = useWatch({ control: form.control, name: "email",    defaultValue: "" });
+  const watchedBirthday = useWatch({ control: form.control, name: "birthday", defaultValue: "" });
+  const watchedAddress  = useWatch({ control: form.control, name: "address",  defaultValue: "" });
+  const watchedHobbies  = useWatch({ control: form.control, name: "hobbies",  defaultValue: "" });
+  const watchedFavorites = useWatch({ control: form.control, name: "favorites", defaultValue: "" });
+  const watchedGoals    = useWatch({ control: form.control, name: "goals",    defaultValue: "" });
+  const watchedFunFacts = useWatch({ control: form.control, name: "fun_facts", defaultValue: "" });
+
+  const initials = ((watchedName || fullName || user?.email || "?") as string)
+    .slice(0, 1)
+    .toUpperCase();
+
+  const { data: profile, isLoading, isPending, isError, error: queryError, refetch } = useQuery({
+    enabled: !!user?.id,
     queryKey: ["my-profile", user?.id],
     retry: 1,
+    staleTime: 30_000,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
@@ -53,38 +99,29 @@ function ProfilePage() {
         .eq("id", user!.id)
         .maybeSingle();
       if (error) {
-        console.error("[ProfilePage] profiles query error:", error);
-        throw error;
+        console.error("[ProfilePage] profile select error:", error.message, error.code);
+        throw new Error(error.message);
       }
       const { data: addr, error: addrErr } = await supabase.rpc("get_profile_address", { _profile_id: user!.id });
-      if (addrErr) console.warn("[ProfilePage] get_profile_address error:", addrErr);
-      return { ...data, address: (addr as string | null) ?? "" };
-    },
-  });
-
-  // isPending + !isFetching means query is disabled (user not yet loaded) — treat as loading
-  const queryWaiting = isPending && !isLoading;
-
-  const form = useForm<PortfolioForm>({
-    resolver: zodResolver(portfolioSchema),
-    defaultValues: {
-      full_name: "", email: "", birthday: "", address: "", avatar_url: "",
-      hobbies: "", favorites: "", goals: "", fun_facts: "",
+      if (addrErr) console.warn("[ProfilePage] get_profile_address error:", addrErr.message);
+      return { ...(data ?? {}), address: (addr as string | null) ?? "" };
     },
   });
 
   useEffect(() => {
     if (!profile) return;
     form.reset({
-      full_name: profile.full_name ?? fullName ?? "",
-      email: profile.email ?? user?.email ?? "",
-      birthday: profile.birthday ?? "",
-      address: profile.address ?? "",
-      avatar_url: profile.avatar_url ?? "",
-      hobbies: Array.isArray(profile.hobbies) ? profile.hobbies.join(", ") : (profile.hobbies ?? ""),
-      favorites: profile.favorites ?? "",
-      goals: profile.goals ?? "",
-      fun_facts: profile.fun_facts ?? "",
+      full_name:  (profile as any).full_name  ?? fullName ?? "",
+      email:      (profile as any).email      ?? user?.email ?? "",
+      birthday:   (profile as any).birthday   ?? "",
+      address:    (profile as any).address    ?? "",
+      avatar_url: (profile as any).avatar_url ?? "",
+      hobbies: Array.isArray((profile as any).hobbies)
+        ? (profile as any).hobbies.join(", ")
+        : ((profile as any).hobbies ?? ""),
+      favorites: (profile as any).favorites ?? "",
+      goals:     (profile as any).goals     ?? "",
+      fun_facts: (profile as any).fun_facts ?? "",
     });
   }, [profile]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -98,7 +135,8 @@ function ProfilePage() {
       const path = `${user.id}/avatar-${Date.now()}.${ext}`;
       const { error: upErr } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
       if (upErr) throw upErr;
-      const { data: signed, error: signErr } = await supabase.storage.from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
+      const { data: signed, error: signErr } = await supabase.storage
+        .from("avatars").createSignedUrl(path, 60 * 60 * 24 * 365 * 5);
       if (signErr) throw signErr;
       form.setValue("avatar_url", signed.signedUrl, { shouldValidate: true, shouldDirty: true });
       toast.success("Photo uploaded.");
@@ -114,32 +152,27 @@ function ProfilePage() {
     const hobbies = values.hobbies
       ? values.hobbies.split(",").map((s) => s.trim()).filter(Boolean)
       : null;
-    const payload = {
-      full_name: values.full_name,
-      email: values.email,
-      birthday: values.birthday,
-      address: values.address,
+    const { error } = await supabase.from("profiles").update({
+      full_name:  values.full_name,
+      email:      values.email,
+      birthday:   values.birthday,
+      address:    values.address,
       avatar_url: values.avatar_url,
       hobbies,
-      favorites: values.favorites || null,
-      goals: values.goals || null,
-      fun_facts: values.fun_facts || null,
-    };
-    const { error } = await supabase.from("profiles").update(payload).eq("id", user.id);
+      favorites:  values.favorites  || null,
+      goals:      values.goals      || null,
+      fun_facts:  values.fun_facts  || null,
+    }).eq("id", user.id);
     if (error) { toast.error(error.message); return; }
     toast.success("Portfolio saved.");
     qc.invalidateQueries({ queryKey: ["my-profile", user.id] });
   };
 
-  const avatarUrl = form.watch("avatar_url");
-  const initials = useMemo(
-    () => (form.watch("full_name") || fullName || user?.email || "?").slice(0, 1).toUpperCase(),
-    [form, fullName, user]
-  );
-
-  if (loading || isLoading || queryWaiting) {
+  // Show spinner while session/role loading OR while query is in-flight
+  // isPending covers the TanStack Query v5 "enabled:false" disabled state too
+  if (loading || isLoading || (isPending && !isError)) {
     return (
-      <div className="flex items-center gap-2 text-muted-foreground py-8">
+      <div className="flex items-center gap-2 text-muted-foreground py-12">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading your portfolio…
       </div>
     );
@@ -148,13 +181,14 @@ function ProfilePage() {
   if (isError) {
     return (
       <div className="flex flex-col items-center gap-4 py-16 text-center">
-        <p className="text-lg font-semibold text-destructive">Could not load your profile</p>
+        <AlertTriangle className="h-8 w-8 text-amber-500" />
+        <p className="text-lg font-semibold">Could not load your profile</p>
         <p className="text-sm text-muted-foreground max-w-sm">
-          {queryError instanceof Error ? queryError.message : "There was a problem fetching your profile data. Please try refreshing the page."}
+          {queryError instanceof Error
+            ? queryError.message
+            : "There was a problem fetching your profile data."}
         </p>
-        <Button variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["my-profile", user?.id] })}>
-          Try again
-        </Button>
+        <Button variant="outline" onClick={() => refetch()}>Try again</Button>
       </div>
     );
   }
@@ -163,7 +197,7 @@ function ProfilePage() {
     <div className="space-y-8">
       <header>
         <p className="text-xs uppercase tracking-widest font-semibold text-program">
-          {role} portfolio
+          {role ?? "member"} portfolio
         </p>
         <h1 className="font-display text-4xl font-bold mt-1 bg-gradient-to-r from-program to-gold bg-clip-text text-transparent">
           Your Portfolio
@@ -185,14 +219,20 @@ function ProfilePage() {
                 <div className="flex items-center gap-4">
                   <Avatar className="h-20 w-20 ring-2 ring-gold/40">
                     <AvatarImage src={avatarUrl || undefined} alt="" />
-                    <AvatarFallback className="bg-gradient-program text-primary-foreground text-xl font-semibold">{initials}</AvatarFallback>
+                    <AvatarFallback className="bg-gradient-program text-primary-foreground text-xl font-semibold">
+                      {initials}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <FormLabel className="text-sm font-semibold">Profile photo <span className="text-rose">*</span></FormLabel>
+                    <FormLabel className="text-sm font-semibold">
+                      Profile photo <span className="text-rose">*</span>
+                    </FormLabel>
                     <div className="mt-2 flex items-center gap-2">
                       <Button type="button" size="sm" variant="outline" asChild disabled={uploading}>
                         <label className="cursor-pointer">
-                          {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                          {uploading
+                            ? <Loader2 className="h-4 w-4 animate-spin" />
+                            : <Upload className="h-4 w-4" />}
                           <span className="ml-2">{uploading ? "Uploading…" : "Upload photo"}</span>
                           <input
                             type="file"
@@ -235,47 +275,63 @@ function ProfilePage() {
                     <FormItem>
                       <FormLabel>Address <span className="text-rose">*</span></FormLabel>
                       <FormControl><Input placeholder="Street, City, Region" {...field} /></FormControl>
-                      <FormDescription className="text-xs">Private — visible only to you, admins, and your linked parent.</FormDescription>
+                      <FormDescription className="text-xs">
+                        Private — visible only to you, admins, and your linked parent.
+                      </FormDescription>
                       <FormMessage />
                     </FormItem>
                   )} />
                 </div>
 
                 <div className="border-t border-gold/20 pt-6">
-                  <p className="text-xs uppercase tracking-widest font-semibold text-gold mb-4">Optional · tell us more</p>
+                  <p className="text-xs uppercase tracking-widest font-semibold text-gold mb-4">
+                    Optional · tell us more
+                  </p>
                   <div className="grid gap-4">
                     <FormField control={form.control} name="hobbies" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Hobbies</FormLabel>
-                        <FormControl><Input placeholder="Comma separated — e.g. basketball, sketching, chess" {...field} /></FormControl>
+                        <FormControl>
+                          <Input placeholder="Comma separated — e.g. basketball, sketching, chess" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="favorites" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Favorites</FormLabel>
-                        <FormControl><Input placeholder="Favorite food, music, films, books…" {...field} /></FormControl>
+                        <FormControl>
+                          <Input placeholder="Favorite food, music, films, books…" {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="goals" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Goals</FormLabel>
-                        <FormControl><Textarea rows={3} placeholder="What you want from mentorship and life this season." {...field} /></FormControl>
+                        <FormControl>
+                          <Textarea rows={3} placeholder="What you want from mentorship and life this season." {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                     <FormField control={form.control} name="fun_facts" render={({ field }) => (
                       <FormItem>
                         <FormLabel>Fun facts / other details</FormLabel>
-                        <FormControl><Textarea rows={3} placeholder="Anything else you want your mentor or family to know." {...field} /></FormControl>
+                        <FormControl>
+                          <Textarea rows={3} placeholder="Anything else you want your mentor or family to know." {...field} />
+                        </FormControl>
                         <FormMessage />
                       </FormItem>
                     )} />
                   </div>
                 </div>
 
-                <Button type="submit" disabled={form.formState.isSubmitting} className="bg-gradient-to-r from-program to-gold text-primary-foreground hover:opacity-90">
+                <Button
+                  type="submit"
+                  disabled={form.formState.isSubmitting}
+                  className="bg-gradient-to-r from-program to-gold text-primary-foreground hover:opacity-90"
+                >
                   {form.formState.isSubmitting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
                   Save portfolio
                 </Button>
@@ -285,15 +341,15 @@ function ProfilePage() {
         </Card>
 
         <PortfolioCard
-          fullName={form.watch("full_name")}
-          email={form.watch("email")}
-          birthday={form.watch("birthday")}
-          address={form.watch("address")}
-          avatarUrl={form.watch("avatar_url")}
-          hobbies={form.watch("hobbies")}
-          favorites={form.watch("favorites")}
-          goals={form.watch("goals")}
-          funFacts={form.watch("fun_facts")}
+          fullName={watchedName}
+          email={watchedEmail}
+          birthday={watchedBirthday}
+          address={watchedAddress}
+          avatarUrl={avatarUrl}
+          hobbies={watchedHobbies}
+          favorites={watchedFavorites}
+          goals={watchedGoals}
+          funFacts={watchedFunFacts}
           role={role ?? "member"}
         />
       </div>
@@ -307,7 +363,9 @@ export function PortfolioCard(props: {
   role: string;
 }) {
   const initials = (props.fullName || "?").slice(0, 1).toUpperCase();
-  const hobbiesList = props.hobbies ? props.hobbies.split(",").map((s) => s.trim()).filter(Boolean) : [];
+  const hobbiesList = props.hobbies
+    ? props.hobbies.split(",").map((s) => s.trim()).filter(Boolean)
+    : [];
   return (
     <Card className="overflow-hidden border-gold/30 bg-gradient-to-b from-card to-card/60">
       <div className="h-20 bg-gradient-to-r from-program via-program/80 to-gold" />
@@ -315,15 +373,19 @@ export function PortfolioCard(props: {
         <div className="flex flex-col items-center text-center">
           <Avatar className="h-24 w-24 ring-4 ring-card shadow-xl">
             <AvatarImage src={props.avatarUrl || undefined} alt="" />
-            <AvatarFallback className="bg-gradient-program text-primary-foreground text-2xl font-semibold">{initials}</AvatarFallback>
+            <AvatarFallback className="bg-gradient-program text-primary-foreground text-2xl font-semibold">
+              {initials}
+            </AvatarFallback>
           </Avatar>
           <h3 className="font-display text-xl font-bold mt-3">{props.fullName || "Your name"}</h3>
-          <Badge variant="outline" className="mt-1 border-gold/40 text-gold uppercase tracking-wider text-[10px]">{props.role}</Badge>
+          <Badge variant="outline" className="mt-1 border-gold/40 text-gold uppercase tracking-wider text-[10px]">
+            {props.role}
+          </Badge>
         </div>
         <div className="mt-5 space-y-2 text-sm">
-          {props.email && <Row icon={<Mail className="h-4 w-4 text-program" />}>{props.email}</Row>}
-          {props.birthday && <Row icon={<Cake className="h-4 w-4 text-program" />}>{props.birthday}</Row>}
-          {props.address && <Row icon={<MapPin className="h-4 w-4 text-program" />}>{props.address}</Row>}
+          {props.email    && <Row icon={<Mail    className="h-4 w-4 text-program" />}>{props.email}</Row>}
+          {props.birthday && <Row icon={<Cake    className="h-4 w-4 text-program" />}>{props.birthday}</Row>}
+          {props.address  && <Row icon={<MapPin  className="h-4 w-4 text-program" />}>{props.address}</Row>}
         </div>
         {hobbiesList.length > 0 && (
           <div className="mt-5">
@@ -350,10 +412,19 @@ export function PortfolioCard(props: {
 }
 
 function Row({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return <div className="flex items-start gap-2 text-muted-foreground"><span className="mt-0.5">{icon}</span><span className="break-words">{children}</span></div>;
+  return (
+    <div className="flex items-start gap-2 text-muted-foreground">
+      <span className="mt-0.5">{icon}</span>
+      <span className="break-words">{children}</span>
+    </div>
+  );
 }
 function SectionLabel({ icon, children }: { icon: React.ReactNode; children: React.ReactNode }) {
-  return <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-gold">{icon}{children}</p>;
+  return (
+    <p className="flex items-center gap-1.5 text-[10px] uppercase tracking-widest font-semibold text-gold">
+      {icon}{children}
+    </p>
+  );
 }
 function Section({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (

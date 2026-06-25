@@ -12,13 +12,16 @@ import { ViewAsBar } from "@/components/ViewAsBar";
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
   beforeLoad: async () => {
+    // Skip auth check during SSR — no session is available server-side;
+    // the client-side beforeLoad will verify when the page hydrates.
+    if (typeof window === "undefined") return;
     try {
       const { data, error } = await supabase.auth.getUser();
       if (error || !data.user) throw redirect({ to: "/auth" });
       return { user: data.user };
     } catch (e) {
       if (isRedirect(e)) throw e;
-      // Any unexpected error (network, Supabase init, etc.) → go to auth
+      // Unexpected Supabase / network error → treat as unauthenticated
       throw redirect({ to: "/auth" });
     }
   },
