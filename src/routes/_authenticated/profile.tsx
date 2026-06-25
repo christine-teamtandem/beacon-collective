@@ -216,38 +216,40 @@ function ProfilePage() {
           <CardContent>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-20 w-20 ring-2 ring-gold/40">
-                    <AvatarImage src={avatarUrl || undefined} alt="" />
-                    <AvatarFallback className="bg-gradient-program text-primary-foreground text-xl font-semibold">
-                      {initials}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <FormLabel className="text-sm font-semibold">
-                      Profile photo <span className="text-rose">*</span>
-                    </FormLabel>
-                    <div className="mt-2 flex items-center gap-2">
-                      <Button type="button" size="sm" variant="outline" asChild disabled={uploading}>
-                        <label className="cursor-pointer">
-                          {uploading
-                            ? <Loader2 className="h-4 w-4 animate-spin" />
-                            : <Upload className="h-4 w-4" />}
-                          <span className="ml-2">{uploading ? "Uploading…" : "Upload photo"}</span>
-                          <input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => e.target.files?.[0] && onAvatarChange(e.target.files[0])}
-                          />
-                        </label>
-                      </Button>
+                <FormField control={form.control} name="avatar_url" render={() => (
+                  <FormItem>
+                    <div className="flex items-center gap-4">
+                      <Avatar className="h-20 w-20 ring-2 ring-gold/40">
+                        <AvatarImage src={avatarUrl || undefined} alt="" />
+                        <AvatarFallback className="bg-gradient-program text-primary-foreground text-xl font-semibold">
+                          {initials}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <FormLabel className="text-sm font-semibold">
+                          Profile photo <span className="text-rose">*</span>
+                        </FormLabel>
+                        <div className="mt-2 flex items-center gap-2">
+                          <Button type="button" size="sm" variant="outline" asChild disabled={uploading}>
+                            <label className="cursor-pointer">
+                              {uploading
+                                ? <Loader2 className="h-4 w-4 animate-spin" />
+                                : <Upload className="h-4 w-4" />}
+                              <span className="ml-2">{uploading ? "Uploading…" : "Upload photo"}</span>
+                              <input
+                                type="file"
+                                accept="image/*"
+                                className="hidden"
+                                onChange={(e) => e.target.files?.[0] && onAvatarChange(e.target.files[0])}
+                              />
+                            </label>
+                          </Button>
+                        </div>
+                        <FormMessage className="mt-1" />
+                      </div>
                     </div>
-                    {form.formState.errors.avatar_url && (
-                      <p className="text-xs text-rose mt-1">{form.formState.errors.avatar_url.message}</p>
-                    )}
-                  </div>
-                </div>
+                  </FormItem>
+                )} />
 
                 <div className="grid gap-4 sm:grid-cols-2">
                   <FormField control={form.control} name="full_name" render={({ field }) => (
