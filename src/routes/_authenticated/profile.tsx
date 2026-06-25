@@ -42,20 +42,28 @@ function ProfilePage() {
   const qc = useQueryClient();
   const [uploading, setUploading] = useState(false);
 
-  const { data: profile, isLoading } = useQuery({
+  const { data: profile, isLoading, isPending, isError, error: queryError } = useQuery({
     enabled: !!user,
     queryKey: ["my-profile", user?.id],
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("profiles")
         .select("id, full_name, email, birthday, avatar_url, hobbies, favorites, goals, fun_facts, program")
         .eq("id", user!.id)
         .maybeSingle();
-      if (error) throw error;
-      const { data: addr } = await supabase.rpc("get_profile_address", { _profile_id: user!.id });
+      if (error) {
+        console.error("[ProfilePage] profiles query error:", error);
+        throw error;
+      }
+      const { data: addr, error: addrErr } = await supabase.rpc("get_profile_address", { _profile_id: user!.id });
+      if (addrErr) console.warn("[ProfilePage] get_profile_address error:", addrErr);
       return { ...data, address: (addr as string | null) ?? "" };
     },
   });
+
+  // isPending + !isFetching means query is disabled (user not yet loaded) — treat as loading
+  const queryWaiting = isPending && !isLoading;
 
   const form = useForm<PortfolioForm>({
     resolver: zodResolver(portfolioSchema),
@@ -129,10 +137,24 @@ function ProfilePage() {
     [form, fullName, user]
   );
 
-  if (loading || isLoading) {
+  if (loading || isLoading || queryWaiting) {
     return (
-      <div className="flex items-center gap-2 text-muted-foreground">
+      <div className="flex items-center gap-2 text-muted-foreground py-8">
         <Loader2 className="h-4 w-4 animate-spin" /> Loading your portfolio…
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center gap-4 py-16 text-center">
+        <p className="text-lg font-semibold text-destructive">Could not load your profile</p>
+        <p className="text-sm text-muted-foreground max-w-sm">
+          {queryError instanceof Error ? queryError.message : "There was a problem fetching your profile data. Please try refreshing the page."}
+        </p>
+        <Button variant="outline" onClick={() => qc.invalidateQueries({ queryKey: ["my-profile", user?.id] })}>
+          Try again
+        </Button>
       </div>
     );
   }
