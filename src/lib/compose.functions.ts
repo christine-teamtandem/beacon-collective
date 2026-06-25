@@ -318,9 +318,9 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
     const html = await render(element);
     const text = await render(element, { plainText: true });
 
-    const { getResendApiKey, getResendFrom } = await import("@/lib/config.server");
-    const resendApiKey = getResendApiKey();
-    const fromAddress = getResendFrom();
+    const { sendBrandedEmail, DEFAULT_FROM } = await import("@/lib/email-sender.server");
+    const { getResendFrom } = await import("@/lib/config.server");
+    const fromAddress = getResendFrom() || DEFAULT_FROM;
 
     const stamp = Date.now();
     const results: { id: string; email: string | undefined; ok: boolean; reason?: string }[] = [];
@@ -329,91 +329,26 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
       if (!r.email) { results.push({ ...r, ok: false, reason: "no email" }); continue; }
       const messageId = `compose-${context.userId}-${stamp}-${r.id}`;
 
-      if (resendApiKey) {
-        // ── Direct Resend delivery (preferred when RESEND_API_KEY is set) ──
-        try {
-          const resendRes = await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${resendApiKey}`,
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              from: fromAddress,
-              to: [r.email],
-              subject: data.subject,
-              html,
-              text,
-              headers: { "X-Message-ID": messageId },
-            }),
-          });
+      // Format-aware send: Lovable connector (lovc_ keys) or direct Resend (re_ keys).
+      const sendRes = await sendBrandedEmail({
+        to: r.email,
+        from: fromAddress,
+        subject: data.subject,
+        html,
+        text,
+        messageId,
+        label: "composed-message",
+      });
 
-          let status: "sent" | "failed";
-          let errorMsg: string | undefined;
+      await supabaseAdmin.from("email_send_log").insert({
+        message_id: messageId,
+        template_name: "composed-message",
+        recipient_email: r.email,
+        status: sendRes.ok ? "sent" : "failed",
+        error_message: sendRes.ok ? null : (sendRes.error ?? "").slice(0, 500),
+      });
 
-          if (resendRes.ok) {
-            status = "sent";
-          } else {
-            status = "failed";
-            const body = await resendRes.json().catch(() => ({})) as Record<string, unknown>;
-            let baseMsg =
-              (body?.message as string) ||
-              (body?.error as string) ||
-              `Resend HTTP ${resendRes.status}`;
-            // Make the most common failure self-explanatory in the Sent log.
-            if (resendRes.status === 401 || /api key is invalid/i.test(baseMsg)) {
-              baseMsg = `API key is invalid (set RESEND_API_KEY in Lovable settings; key currently starts "${resendApiKey.slice(0, 5)}…", length ${resendApiKey.length})`;
-            } else if (resendRes.status === 403 || /domain is not verified/i.test(baseMsg)) {
-              baseMsg = `${baseMsg} — verify the sending domain for "${fromAddress}" in Resend → Domains`;
-            }
-            errorMsg = baseMsg;
-          }
-
-          await supabaseAdmin.from("email_send_log").insert({
-            message_id: messageId,
-            template_name: "composed-message",
-            recipient_email: r.email,
-            status,
-            error_message: errorMsg ?? null,
-          });
-
-          results.push({ ...r, ok: status === "sent", reason: errorMsg });
-        } catch (err) {
-          const msg = err instanceof Error ? err.message : String(err);
-          await supabaseAdmin.from("email_send_log").insert({
-            message_id: messageId,
-            template_name: "composed-message",
-            recipient_email: r.email,
-            status: "failed",
-            error_message: msg.slice(0, 500),
-          });
-          results.push({ ...r, ok: false, reason: msg });
-        }
-      } else {
-        // ── Queue-based fallback (Lovable Cloud pipeline) ──
-        await supabaseAdmin.from("email_send_log").insert({
-          message_id: messageId,
-          template_name: "composed-message",
-          recipient_email: r.email,
-          status: "pending",
-        });
-        const { error } = await supabaseAdmin.rpc("enqueue_email", {
-          queue_name: "transactional_emails",
-          payload: {
-            message_id: messageId,
-            to: r.email,
-            from: fromAddress,
-            sender_domain: "notify.mentorship.freebleeders.org",
-            subject: data.subject,
-            html, text,
-            purpose: "transactional",
-            label: "composed-message",
-            idempotency_key: messageId,
-            queued_at: new Date().toISOString(),
-          },
-        });
-        results.push({ ...r, ok: !error, reason: error?.message });
-      }
+      results.push({ ...r, ok: sendRes.ok, reason: sendRes.error });
     }
 
     return { sent: results.filter((r) => r.ok).length, total: results.length, results };

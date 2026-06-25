@@ -143,33 +143,17 @@ export const resendLoginEmail = createServerFn({ method: "POST" })
     return { ok: true, email: u.user.email };
   });
 
-async function sendViaResend(
+async function sendViaConnector(
   to: string,
   subject: string,
   html: string,
   text: string,
   messageId: string,
 ) {
-  const { getResendApiKey, getResendFrom } = await import("@/lib/config.server");
-  const resendKey = getResendApiKey();
-  if (!resendKey) throw new Error("RESEND_API_KEY not set — add it in Lovable project settings.");
-  const from = getResendFrom();
-  const res = await fetch("https://api.resend.com/emails", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ from, to: [to], subject, html, text, headers: { "X-Message-ID": messageId } }),
-  });
-  if (!res.ok) {
-    const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-    let msg = (body.message as string) || (body.error as string) || `Resend HTTP ${res.status}`;
-    if (res.status === 401 || /api key is invalid/i.test(msg)) {
-      msg = `API key is invalid — the RESEND_API_KEY in Lovable settings is wrong or stale (key starts "${resendKey.slice(0, 5)}…", length ${resendKey.length}). Create a fresh full-access key at resend.com/api-keys, paste the FULL value, and redeploy.`;
-    } else if (res.status === 403 || /domain is not verified/i.test(msg)) {
-      msg = `${msg} — verify the sending domain for "${from}" at resend.com/domains.`;
-    }
-    throw new Error(msg);
-  }
-  return await res.json() as { id?: string };
+  const { sendBrandedEmail } = await import("@/lib/email-sender.server");
+  const res = await sendBrandedEmail({ to, subject, html, text, messageId, label: "test-email" });
+  if (!res.ok) throw new Error(res.error ?? "Email send failed");
+  return res;
 }
 
 export const sendTestEmail = createServerFn({ method: "POST" })
@@ -195,7 +179,7 @@ export const sendTestEmail = createServerFn({ method: "POST" })
     let status: "sent" | "failed" = "sent";
     let errorMessage: string | null = null;
     try {
-      await sendViaResend(to, "[Test] Freebleeders Mentorship Hub — Email Pipeline", html, text, messageId);
+      await sendViaConnector(to, "[Test] Freebleeders Mentorship Hub — Email Pipeline", html, text, messageId);
     } catch (e) {
       status = "failed";
       errorMessage = e instanceof Error ? e.message : String(e);
@@ -230,33 +214,39 @@ export const runApiDiagnostics = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const checks: DiagCheck[] = [];
 
-    // ── 1. Resend ────────────────────────────────────────────────────────────
-    const { getResendApiKey, getResendFrom } = await import("@/lib/config.server");
-    const resendKey = getResendApiKey();
-    const rawResendKey = process.env.RESEND_API_KEY ?? "";
-    if (!resendKey) {
+    // ── 1. Email credential (connector-aware) ────────────────────────────────
+    const { resolveEmailCredential, DEFAULT_FROM } = await import("@/lib/email-sender.server");
+    const { getResendFrom } = await import("@/lib/config.server");
+    const cred = resolveEmailCredential();
+
+    if (cred.kind === "none") {
       checks.push({
-        name: "RESEND_API_KEY", category: "Email",
-        status: "not_configured", message: "Not set",
-        detail: "Add RESEND_API_KEY in Lovable → Project Settings → Environment Variables",
+        name: "Email credential", category: "Email",
+        status: "not_configured",
+        message: "No LOVABLE_API_KEY or valid RESEND_API_KEY found",
+        detail: "Set LOVABLE_API_KEY (your lovc_… connector key) in Lovable settings. This app sends through the Lovable email connector.",
+      });
+    } else if (cred.kind === "lovable") {
+      checks.push({
+        name: "Email credential", category: "Email",
+        status: "ok",
+        message: `Lovable connector key detected (starts "${cred.key.slice(0, 5)}…")`,
+        detail: "Emails send via @lovable.dev/email-js (sendLovableEmail). This is the correct setup for a lovc_ key.",
       });
     } else {
-      // Surface common formatting problems before even hitting Resend.
-      const formatNotes: string[] = [];
-      if (rawResendKey !== resendKey) formatNotes.push("had surrounding quotes/whitespace (auto-trimmed)");
-      if (!resendKey.startsWith("re_")) formatNotes.push('does not start with "re_" — likely not a valid Resend key');
+      // Real Resend key — validate against Resend's API
       try {
         const res = await fetch("https://api.resend.com/domains", {
-          headers: { Authorization: `Bearer ${resendKey}` },
+          headers: { Authorization: `Bearer ${cred.key}` },
         });
         if (res.ok) {
           const d = await res.json() as { data?: Array<{ name: string; status: string }> };
           const domains = d.data ?? [];
           const verified = domains.filter((x) => x.status === "verified");
           checks.push({
-            name: "RESEND_API_KEY", category: "Email",
+            name: "Email credential", category: "Email",
             status: verified.length > 0 ? "ok" : "warning",
-            message: `Valid key · ${domains.length} domain(s) · ${verified.length} verified`,
+            message: `Valid Resend key · ${domains.length} domain(s) · ${verified.length} verified`,
             detail: domains.length
               ? domains.map((x) => `${x.name} (${x.status})`).join(", ")
               : "Key works, but NO domains added — add & verify mentorship.freebleeders.org at resend.com/domains",
@@ -264,29 +254,27 @@ export const runApiDiagnostics = createServerFn({ method: "POST" })
         } else {
           const err = await res.json().catch(() => ({})) as Record<string, unknown>;
           checks.push({
-            name: "RESEND_API_KEY", category: "Email",
+            name: "Email credential", category: "Email",
             status: "error",
             message: (err.message as string) || `HTTP ${res.status}`,
-            detail: `Key is set (starts "${resendKey.slice(0, 5)}…", length ${resendKey.length}) but Resend rejected it. ${formatNotes.length ? "Notes: " + formatNotes.join("; ") + ". " : ""}Create a NEW full-access key at resend.com/api-keys, paste the FULL value into Lovable settings, then redeploy.`,
+            detail: `RESEND_API_KEY (starts "${cred.key.slice(0, 5)}…") was rejected by Resend. Use a full-access re_ key, OR switch to LOVABLE_API_KEY (lovc_…) to use the Lovable connector.`,
           });
         }
       } catch (e) {
         checks.push({
-          name: "RESEND_API_KEY", category: "Email",
+          name: "Email credential", category: "Email",
           status: "error", message: e instanceof Error ? e.message : "Network error",
         });
       }
     }
 
     // ── From address ─────────────────────────────────────────────────────────
-    const fromAddr = getResendFrom();
+    const fromAddr = getResendFrom() || DEFAULT_FROM;
     checks.push({
-      name: "RESEND_FROM_EMAIL", category: "Email",
-      status: process.env.RESEND_FROM_EMAIL ? "ok" : "warning",
+      name: "From address", category: "Email",
+      status: "ok",
       message: fromAddr,
-      detail: process.env.RESEND_FROM_EMAIL
-        ? "Custom from address configured — its domain must be verified in Resend"
-        : "Using default — the domain mentorship.freebleeders.org must be verified in Resend",
+      detail: "Domain mentorship.freebleeders.org must be verified in your email provider.",
     });
 
     // ── 2. Zoom ──────────────────────────────────────────────────────────────
