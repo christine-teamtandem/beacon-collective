@@ -76,11 +76,18 @@ When given a reference email, template, or content notes, you MUST:
     return { draft };
   });
 
-const Input = z.object({
-  recipientIds: z.array(z.string().uuid()).min(1).max(200),
-  subject: z.string().trim().min(1).max(200),
-  body: z.string().trim().min(1).max(10000),
-});
+const Input = z
+  .object({
+    recipientIds: z.array(z.string().uuid()).min(1).max(200),
+    subject: z.string().trim().min(1).max(200),
+    body: z.string().trim().max(10000).optional().default(""),
+    // When provided, this saved-template HTML is sent as-is (with {{first_name}}
+    // personalised per recipient) instead of wrapping `body` in composed-message.
+    html: z.string().max(200_000).optional(),
+  })
+  .refine((d) => (d.body && d.body.length > 0) || (d.html && d.html.trim().length > 0), {
+    message: "Provide a message body or choose a template.",
+  });
 
 export const listAllowedRecipients = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -299,7 +306,14 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
     const senderName = senderProfile?.full_name || senderUser?.user?.email || "A member";
     const senderRole = (senderRoleRows ?? [])[0]?.role || "";
 
-    // Resolve recipient emails
+    // Resolve recipient emails + names (names power {{first_name}} personalisation)
+    const { data: nameRows } = await supabaseAdmin
+      .from("profiles")
+      .select("id, full_name")
+      .in("id", data.recipientIds);
+    const nameMap = new Map<string, string>((nameRows ?? []).map((r) => [r.id, r.full_name || ""]));
+    const firstName = (id: string) => (nameMap.get(id) || "").trim().split(/\s+/)[0] || "there";
+
     const recipientUsers = await Promise.all(
       data.recipientIds.map(async (id) => {
         const { data: u } = await supabaseAdmin.auth.admin.getUserById(id);
@@ -307,16 +321,29 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
       })
     );
 
-    // Render once
-    const { render } = await import("@react-email/components");
-    const React = await import("react");
-    const { TEMPLATES } = await import("@/lib/email-templates/registry");
-    const entry = TEMPLATES["composed-message"];
-    const element = React.createElement(entry.component, {
-      senderName, senderRole, subject: data.subject, body: data.body,
-    });
-    const html = await render(element);
-    const text = await render(element, { plainText: true });
+    const useTemplate = !!(data.html && data.html.trim());
+    const stripHtml = (h: string) =>
+      h
+        .replace(/<style[\s\S]*?<\/style>/gi, "")
+        .replace(/<[^>]+>/g, " ")
+        .replace(/&nbsp;/gi, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    // Pre-render the composed-message wrapper once (only when not using a template).
+    let baseHtml = "";
+    let baseText = "";
+    if (!useTemplate) {
+      const { render } = await import("@react-email/components");
+      const React = await import("react");
+      const { TEMPLATES } = await import("@/lib/email-templates/registry");
+      const entry = TEMPLATES["composed-message"];
+      const element = React.createElement(entry.component, {
+        senderName, senderRole, subject: data.subject, body: data.body,
+      });
+      baseHtml = await render(element);
+      baseText = await render(element, { plainText: true });
+    }
 
     const { sendBrandedEmail, DEFAULT_FROM } = await import("@/lib/email-sender.server");
     const { getResendFrom } = await import("@/lib/config.server");
@@ -329,6 +356,11 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
       if (!r.email) { results.push({ ...r, ok: false, reason: "no email" }); continue; }
       const messageId = `compose-${context.userId}-${stamp}-${r.id}`;
 
+      const html = useTemplate
+        ? data.html!.replace(/\{\{\s*first_name\s*\}\}/g, firstName(r.id))
+        : baseHtml;
+      const text = useTemplate ? stripHtml(html) : baseText;
+
       // Format-aware send: Lovable connector (lovc_ keys) or direct Resend (re_ keys).
       const sendRes = await sendBrandedEmail({
         to: r.email,
@@ -337,7 +369,7 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
         html,
         text,
         messageId,
-        label: "composed-message",
+        label: useTemplate ? "composed-template" : "composed-message",
       });
 
       await supabaseAdmin.from("email_send_log").insert({

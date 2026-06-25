@@ -9,6 +9,7 @@ import {
   listSentEmails,
   generateEmailDraft,
 } from "@/lib/compose.functions";
+import { listTemplates } from "@/lib/templates.functions";
 import {
   Card,
   CardContent,
@@ -39,6 +40,7 @@ import {
   CalendarClock,
   RefreshCw,
   Inbox,
+  LayoutTemplate,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/compose")({
@@ -54,6 +56,7 @@ interface Draft {
   subject: string;
   body: string;
   recipientIds: string[];
+  templateId?: string;
   updatedAt: number;
 }
 
@@ -62,6 +65,7 @@ interface ScheduledEmail {
   subject: string;
   body: string;
   recipientIds: string[];
+  templateId?: string;
   scheduledAt: number;
   createdAt: number;
 }
@@ -137,6 +141,7 @@ function ComposePage() {
   const sendFn = useServerFn(sendComposedEmail);
   const sentFn = useServerFn(listSentEmails);
   const aiFn   = useServerFn(generateEmailDraft);
+  const tplFn  = useServerFn(listTemplates);
 
   const { data, isLoading } = useQuery({
     queryKey: ["compose-recipients"],
@@ -147,6 +152,12 @@ function ComposePage() {
     queryFn: () => (sentFn as any)({}),
     enabled: activeTab === "sent",
   });
+  const templatesQuery = useQuery({
+    queryKey: ["email-templates"],
+    queryFn: () => (tplFn as any)(),
+  });
+  const templates: Array<{ id: string; name: string; subject: string | null; html: string }> =
+    templatesQuery.data?.templates ?? [];
 
   const recipients: Array<{ id: string; fullName: string; program: string | null; roles: string[] }> =
     data?.recipients ?? [];
@@ -159,6 +170,22 @@ function ComposePage() {
   const [roleFilter,     setRoleFilter]     = useState("all");
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
   const [scheduleDate,   setScheduleDate]   = useState("");
+
+  // ── Template state ──
+  const [templateId,   setTemplateId]   = useState<string>("");
+  const [templateHtml, setTemplateHtml] = useState<string>("");
+  const [templateName, setTemplateName] = useState<string>("");
+
+  const applyTemplate = (id: string) => {
+    const t = templates.find((x) => x.id === id);
+    if (!t) { setTemplateId(""); setTemplateHtml(""); setTemplateName(""); return; }
+    setTemplateId(t.id);
+    setTemplateHtml(t.html);
+    setTemplateName(t.name);
+    if (!subject.trim() && t.subject) setSubject(t.subject);
+    toast.success(`Using template "${t.name}". Recipients receive this design.`);
+  };
+  const clearTemplate = () => { setTemplateId(""); setTemplateHtml(""); setTemplateName(""); };
 
   // ── AI state ──
   const [aiOpen,      setAiOpen]      = useState(false);
@@ -231,6 +258,7 @@ function ComposePage() {
     setSubject(""); setBody(""); setSelected(new Set());
     setEditingDraftId(null); setScheduleDate("");
     setAiReference(""); setAiContext("");
+    clearTemplate();
   };
 
   // ── Send ──
@@ -240,7 +268,8 @@ function ComposePage() {
         data: {
           recipientIds: Array.from(selected),
           subject: subject.trim(),
-          body: body.trim(),
+          body: templateId ? "" : body.trim(),
+          html: templateId ? templateHtml : undefined,
         },
       }),
     onSuccess: (res: any) => {
@@ -258,11 +287,11 @@ function ComposePage() {
 
   // ── Draft actions ──
   const saveDraft = () => {
-    if (!subject.trim() && !body.trim() && selected.size === 0) {
+    if (!subject.trim() && !body.trim() && selected.size === 0 && !templateId) {
       toast.error("Nothing to save."); return;
     }
     const id = editingDraftId ?? crypto.randomUUID();
-    const draft: Draft = { id, subject, body, recipientIds: Array.from(selected), updatedAt: Date.now() };
+    const draft: Draft = { id, subject, body, recipientIds: Array.from(selected), templateId: templateId || undefined, updatedAt: Date.now() };
     const next = [draft, ...drafts.filter((d) => d.id !== id)];
     setDrafts(next); saveDrafts(next); setEditingDraftId(id);
     toast.success("Draft saved.");
@@ -271,6 +300,7 @@ function ComposePage() {
   const openDraft = (d: Draft) => {
     setSubject(d.subject); setBody(d.body);
     setSelected(new Set(d.recipientIds)); setEditingDraftId(d.id);
+    if (d.templateId) applyTemplate(d.templateId); else clearTemplate();
     setActiveTab("compose");
   };
 
@@ -284,13 +314,13 @@ function ComposePage() {
   // ── Schedule actions ──
   const scheduleEmail = () => {
     if (!scheduleDate) { toast.error("Pick a send date/time first."); return; }
-    if (!subject.trim() || !body.trim()) { toast.error("Subject and message are required."); return; }
+    if (!subject.trim() || (!templateId && !body.trim())) { toast.error("Subject and a message or template are required."); return; }
     if (selected.size === 0) { toast.error("Select at least one recipient."); return; }
     const scheduledAt = new Date(scheduleDate).getTime();
     if (scheduledAt <= Date.now()) { toast.error("Scheduled time must be in the future."); return; }
     const entry: ScheduledEmail = {
       id: crypto.randomUUID(), subject, body,
-      recipientIds: Array.from(selected), scheduledAt, createdAt: Date.now(),
+      recipientIds: Array.from(selected), templateId: templateId || undefined, scheduledAt, createdAt: Date.now(),
     };
     const next = [entry, ...scheduled];
     setScheduled(next); saveScheduled(next);
@@ -305,6 +335,7 @@ function ComposePage() {
 
   const loadScheduledIntoComposer = (s: ScheduledEmail) => {
     setSubject(s.subject); setBody(s.body); setSelected(new Set(s.recipientIds));
+    if (s.templateId) applyTemplate(s.templateId); else clearTemplate();
     const next = scheduled.filter((x) => x.id !== s.id);
     setScheduled(next); saveScheduled(next);
     setActiveTab("compose");
@@ -440,17 +471,66 @@ function ComposePage() {
               )}
             </Card>
 
+            {/* Template picker */}
+            <Card className="border-gold/30">
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-base">
+                  <LayoutTemplate className="h-4 w-4 text-gold" />
+                  <span>Use a saved template</span>
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Send a designed template instead of plain text. {"{{first_name}}"} is personalised per recipient.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={templateId}
+                    onChange={(e) => applyTemplate(e.target.value)}
+                    className="h-9 flex-1 rounded-md border border-input bg-background px-3 text-sm"
+                  >
+                    <option value="">— No template (use the message below) —</option>
+                    {templates.map((t) => (
+                      <option key={t.id} value={t.id}>{t.name}</option>
+                    ))}
+                  </select>
+                  {templateId && (
+                    <Button size="sm" variant="ghost" onClick={clearTemplate}>Clear</Button>
+                  )}
+                </div>
+                {templates.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    No saved templates yet — build one in the Templates page.
+                  </p>
+                )}
+                {templateId && (
+                  <iframe
+                    title="Template preview"
+                    srcDoc={templateHtml}
+                    className="h-[260px] w-full rounded-lg border bg-white"
+                  />
+                )}
+              </CardContent>
+            </Card>
+
             {/* Message composer */}
-            <Card>
+            <Card className={templateId ? "opacity-60" : ""}>
               <CardHeader>
                 <CardTitle className="flex items-center justify-between">
                   <span>Message</span>
                   {editingDraftId && (
                     <Badge variant="outline" className="text-[10px]">Editing draft</Badge>
                   )}
+                  {templateId && (
+                    <Badge variant="outline" className="border-gold/50 text-[10px] text-gold">
+                      Template active — message ignored
+                    </Badge>
+                  )}
                 </CardTitle>
                 <CardDescription>
-                  Plain text — double line breaks become separate paragraphs in the email.
+                  {templateId
+                    ? `Sending the "${templateName}" template. Clear it above to write a plain-text message instead.`
+                    : "Plain text — double line breaks become separate paragraphs in the email."}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
@@ -471,6 +551,7 @@ function ComposePage() {
                     onChange={(e) => setBody(e.target.value)}
                     maxLength={10000}
                     rows={14}
+                    disabled={!!templateId}
                     placeholder="Type your message here, or use AI to generate a draft above…"
                   />
                   <p className="text-xs text-muted-foreground">{body.length} / 10 000</p>
@@ -506,7 +587,7 @@ function ComposePage() {
                         variant="outline"
                         className="border-gold/50 text-gold hover:bg-gold/10"
                         onClick={scheduleEmail}
-                        disabled={!selected.size || !subject.trim() || !body.trim()}
+                        disabled={!selected.size || !subject.trim() || (!templateId && !body.trim())}
                       >
                         <CalendarClock className="mr-1.5 h-4 w-4" /> Schedule
                       </Button>
@@ -514,7 +595,7 @@ function ComposePage() {
                     <Button variant="ghost" onClick={clearComposer}>Clear</Button>
                     <Button
                       onClick={() => send.mutate()}
-                      disabled={send.isPending || !selected.size || !subject.trim() || !body.trim()}
+                      disabled={send.isPending || !selected.size || !subject.trim() || (!templateId && !body.trim())}
                     >
                       <Send className="mr-1.5 h-4 w-4" />
                       {send.isPending ? "Sending…" : "Send email"}
