@@ -20,12 +20,12 @@ type Item = { title: string; url: string; icon: React.ComponentType<{ className?
 
 const profileItem: Item = { title: "My Profile", url: "/profile", icon: UserCircle2 };
 
-/** Email sub-navigation items — each points to /compose with a tab search param. */
+/** Email sub-navigation items — all point to /compose (tab switching is internal state). */
 const emailSubItems = [
-  { title: "Compose Email", tab: "compose", icon: Send },
-  { title: "Scheduled",     tab: "scheduled", icon: CalendarClock },
-  { title: "Drafts",        tab: "drafts", icon: Clock },
-  { title: "Sent",          tab: "sent", icon: History },
+  { title: "Compose Email", icon: Send },
+  { title: "Scheduled",     icon: CalendarClock },
+  { title: "Drafts",        icon: Clock },
+  { title: "Sent",          icon: History },
 ] as const;
 
 function itemsFor(role: AppRole | null, _program: Program | null): { label: string; items: Item[] }[] {
@@ -108,8 +108,6 @@ export function AppSidebar() {
   const { role, program, fullName, user } = useUserContext();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tabParam = useRouterState({ select: (s) => (s.location.search as any)?.tab as string | undefined });
   const { isMobile, setOpenMobile } = useSidebar();
 
   const emailActive = pathname === "/compose";
@@ -221,30 +219,20 @@ export function AppSidebar() {
                       </CollapsibleTrigger>
                       <CollapsibleContent>
                         <SidebarMenuSub>
-                          {emailSubItems.map((sub) => {
-                            const subActive =
-                              pathname === "/compose" &&
-                              (tabParam === sub.tab ||
-                                (!tabParam && sub.tab === "compose"));
-                            return (
-                              <SidebarMenuSubItem key={sub.tab}>
-                                <SidebarMenuSubButton
-                                  asChild
-                                  isActive={subActive}
+                          {emailSubItems.map((sub) => (
+                            <SidebarMenuSubItem key={sub.title}>
+                              <SidebarMenuSubButton asChild>
+                                <Link
+                                  to="/compose"
+                                  onClick={closeMobile}
+                                  className="flex items-center gap-2"
                                 >
-                                  <Link
-                                    to="/compose"
-                                    search={{ tab: sub.tab }}
-                                    onClick={closeMobile}
-                                    className="flex items-center gap-2"
-                                  >
-                                    <sub.icon className="h-3.5 w-3.5" />
-                                    <span>{sub.title}</span>
-                                  </Link>
-                                </SidebarMenuSubButton>
-                              </SidebarMenuSubItem>
-                            );
-                          })}
+                                  <sub.icon className="h-3.5 w-3.5" />
+                                  <span>{sub.title}</span>
+                                </Link>
+                              </SidebarMenuSubButton>
+                            </SidebarMenuSubItem>
+                          ))}
                         </SidebarMenuSub>
                       </CollapsibleContent>
                     </SidebarMenuItem>
