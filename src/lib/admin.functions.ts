@@ -143,54 +143,206 @@ export const resendLoginEmail = createServerFn({ method: "POST" })
     return { ok: true, email: u.user.email };
   });
 
+async function sendViaResend(
+  to: string,
+  subject: string,
+  html: string,
+  text: string,
+  messageId: string,
+) {
+  const resendKey = process.env.RESEND_API_KEY;
+  if (!resendKey) throw new Error("RESEND_API_KEY not set — add it in Lovable project settings.");
+  const from =
+    process.env.RESEND_FROM_EMAIL ||
+    "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>";
+  const res = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+    body: JSON.stringify({ from, to: [to], subject, html, text, headers: { "X-Message-ID": messageId } }),
+  });
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({})) as Record<string, unknown>;
+    throw new Error((body.message as string) || (body.error as string) || `Resend HTTP ${res.status}`);
+  }
+  return await res.json() as { id?: string };
+}
+
 export const sendTestEmail = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => z.object({ to: z.string().email().optional() }).parse(d))
+  .handler(async ({ data, context }) => {
     await assertAdmin(context.supabase, context.userId);
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: u } = await supabaseAdmin.auth.admin.getUserById(context.userId);
-    const email = u?.user?.email;
-    if (!email) throw new Error("No email on file for current admin.");
+    const adminEmail = u?.user?.email;
+    if (!adminEmail) throw new Error("No email on file for current admin.");
+    const to = data.to || adminEmail;
 
     const messageId = `test-${context.userId}-${Date.now()}`;
-    // Render via the public send route would require JWT; we shortcut by
-    // enqueuing through the registry-rendered HTML directly.
     const { render } = await import("@react-email/components");
     const React = await import("react");
     const { TEMPLATES } = await import("@/lib/email-templates/registry");
     const entry = TEMPLATES["test-email"];
-    const element = React.createElement(entry.component, {
-      recipient: email,
-      triggeredBy: email,
-    });
+    const element = React.createElement(entry.component, { recipient: to, triggeredBy: adminEmail });
     const html = await render(element);
     const text = await render(element, { plainText: true });
+
+    let status: "sent" | "failed" = "sent";
+    let errorMessage: string | null = null;
+    try {
+      await sendViaResend(to, "[Test] Freebleeders Mentorship Hub — Email Pipeline", html, text, messageId);
+    } catch (e) {
+      status = "failed";
+      errorMessage = e instanceof Error ? e.message : String(e);
+    }
 
     await supabaseAdmin.from("email_send_log").insert({
       message_id: messageId,
       template_name: "test-email",
-      recipient_email: email,
-      status: "pending",
+      recipient_email: to,
+      status,
+      error_message: errorMessage,
     });
 
-    const { error } = await supabaseAdmin.rpc("enqueue_email", {
-      queue_name: "transactional_emails",
-      payload: {
-        message_id: messageId,
-        to: email,
-        from: "freebleeders mentorship hub <noreply@mentorship.freebleeders.org>",
-        sender_domain: "notify.mentorship.freebleeders.org",
-        subject: "[Test] freebleeders mentorship hub email pipeline",
-        html,
-        text,
-        purpose: "transactional",
-        label: "test-email",
-        idempotency_key: messageId,
-        queued_at: new Date().toISOString(),
-      },
+    if (status === "failed") throw new Error(errorMessage ?? "Send failed");
+    return { ok: true, email: to, messageId };
+  });
+
+// ── API diagnostics ──────────────────────────────────────────────────────────
+
+export type DiagCheck = {
+  name: string;
+  category: string;
+  status: "ok" | "error" | "warning" | "not_configured";
+  message: string;
+  detail?: string;
+};
+
+export const runApiDiagnostics = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    await assertAdmin(context.supabase, context.userId);
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const checks: DiagCheck[] = [];
+
+    // ── 1. Resend ────────────────────────────────────────────────────────────
+    const resendKey = process.env.RESEND_API_KEY;
+    if (!resendKey) {
+      checks.push({
+        name: "RESEND_API_KEY", category: "Email",
+        status: "not_configured", message: "Not set",
+        detail: "Add RESEND_API_KEY in Lovable → Project Settings → Environment Variables",
+      });
+    } else {
+      try {
+        const res = await fetch("https://api.resend.com/domains", {
+          headers: { Authorization: `Bearer ${resendKey}` },
+        });
+        if (res.ok) {
+          const d = await res.json() as { data?: Array<{ name: string; status: string }> };
+          const domains = d.data ?? [];
+          const verified = domains.filter((x) => x.status === "verified");
+          checks.push({
+            name: "RESEND_API_KEY", category: "Email",
+            status: verified.length > 0 ? "ok" : "warning",
+            message: `Valid key · ${domains.length} domain(s) · ${verified.length} verified`,
+            detail: domains.length
+              ? domains.map((x) => `${x.name} (${x.status})`).join(", ")
+              : "No domains — verify mentorship.freebleeders.org in Resend",
+          });
+        } else {
+          const err = await res.json().catch(() => ({})) as Record<string, unknown>;
+          checks.push({
+            name: "RESEND_API_KEY", category: "Email",
+            status: "error",
+            message: (err.message as string) || `HTTP ${res.status}`,
+            detail: "Key is set but rejected by Resend — replace it in Lovable settings",
+          });
+        }
+      } catch (e) {
+        checks.push({
+          name: "RESEND_API_KEY", category: "Email",
+          status: "error", message: e instanceof Error ? e.message : "Network error",
+        });
+      }
+    }
+
+    // ── From address ─────────────────────────────────────────────────────────
+    const fromAddr = process.env.RESEND_FROM_EMAIL ||
+      "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>";
+    checks.push({
+      name: "RESEND_FROM_EMAIL", category: "Email",
+      status: process.env.RESEND_FROM_EMAIL ? "ok" : "warning",
+      message: fromAddr,
+      detail: process.env.RESEND_FROM_EMAIL
+        ? "Custom from address configured"
+        : "Using default — set RESEND_FROM_EMAIL to override",
     });
-    if (error) throw new Error(error.message);
-    return { ok: true, email, messageId };
+
+    // ── 2. Zoom ──────────────────────────────────────────────────────────────
+    const zoomId = process.env.ZOOM_CLIENT_ID;
+    const zoomSecret = process.env.ZOOM_CLIENT_SECRET;
+    const missing = [!zoomId && "ZOOM_CLIENT_ID", !zoomSecret && "ZOOM_CLIENT_SECRET"].filter(Boolean);
+    if (missing.length) {
+      checks.push({
+        name: "Zoom OAuth", category: "Zoom",
+        status: "not_configured",
+        message: `Missing: ${missing.join(", ")}`,
+        detail: "Set both vars in Lovable settings — needed for calendar Zoom sessions",
+      });
+    } else {
+      checks.push({
+        name: "Zoom OAuth", category: "Zoom",
+        status: "ok",
+        message: "ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET configured",
+        detail: `Client ID: ${zoomId!.slice(0, 8)}...`,
+      });
+    }
+
+    const siteUrl = process.env.PUBLIC_SITE_URL || process.env.VITE_PUBLIC_SITE_URL;
+    checks.push({
+      name: "PUBLIC_SITE_URL", category: "Zoom",
+      status: siteUrl ? "ok" : "warning",
+      message: siteUrl || "Not set (using hardcoded default)",
+      detail: siteUrl
+        ? "Zoom OAuth redirect URI will use this value"
+        : "Set PUBLIC_SITE_URL=https://mentorship.freebleeders.org in Lovable settings",
+    });
+
+    // ── 3. Lovable AI Gateway ────────────────────────────────────────────────
+    const aiKey = process.env.LOVABLE_API_KEY;
+    checks.push({
+      name: "LOVABLE_API_KEY", category: "AI",
+      status: aiKey ? "ok" : "not_configured",
+      message: aiKey ? "Configured" : "Not set — AI email drafting unavailable",
+      detail: aiKey
+        ? "Used for AI-powered email draft generation"
+        : "Set LOVABLE_API_KEY in Lovable settings to enable AI drafts",
+    });
+
+    // ── 4. Supabase / database ───────────────────────────────────────────────
+    for (const t of ["profiles", "user_roles", "email_send_log", "sessions", "mentor_assignments"]) {
+      const { count, error } = await (supabaseAdmin as any)
+        .from(t).select("*", { count: "exact", head: true });
+      checks.push({
+        name: `Table: ${t}`, category: "Database",
+        status: error ? "error" : "ok",
+        message: error ? error.message : `${count ?? 0} rows`,
+      });
+    }
+
+    // Recent email log entries
+    const { data: logs } = await supabaseAdmin
+      .from("email_send_log")
+      .select("template_name, recipient_email, status, created_at, error_message")
+      .order("created_at", { ascending: false })
+      .limit(10);
+
+    return {
+      checks,
+      recentEmails: logs ?? [],
+      timestamp: new Date().toISOString(),
+    };
   });
 
 export const hubSmokeTest = createServerFn({ method: "POST" })

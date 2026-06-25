@@ -1,10 +1,11 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useUserContext } from "@/hooks/useSession";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { supabase } from "@/integrations/supabase/client";
-import { deleteAccount, sendPasswordReset, unlockAccount, resendLoginEmail, sendTestEmail, hubSmokeTest } from "@/lib/admin.functions";
+import { deleteAccount, sendPasswordReset, unlockAccount, resendLoginEmail, sendTestEmail, runApiDiagnostics } from "@/lib/admin.functions";
+import type { DiagCheck } from "@/lib/admin.functions";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 import {
   UserPlus, Users, Shield, Heart, Trash2, Search, ShieldCheck, GraduationCap, UserCog, Baby,
   MoreVertical, KeyRound, Unlock, Mail, Activity, RefreshCw, CheckCircle2, XCircle, Eye,
+  AlertTriangle, HelpCircle, Send, Zap, Database, Bot, Clock,
 } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -257,66 +259,173 @@ function Shortcuts() {
   );
 }
 
+const STATUS_ICON: Record<string, React.ReactNode> = {
+  ok:              <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />,
+  error:           <XCircle      className="h-4 w-4 text-destructive shrink-0" />,
+  warning:         <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0" />,
+  not_configured:  <HelpCircle   className="h-4 w-4 text-muted-foreground shrink-0" />,
+};
+const STATUS_BADGE: Record<string, string> = {
+  ok:             "border-green-500/40 text-green-500",
+  error:          "border-destructive/40 text-destructive",
+  warning:        "border-amber-400/40 text-amber-400",
+  not_configured: "border-muted-foreground/40 text-muted-foreground",
+};
+const CATEGORY_ICON: Record<string, React.ReactNode> = {
+  Email:    <Mail     className="h-4 w-4" />,
+  Zoom:     <Zap      className="h-4 w-4" />,
+  AI:       <Bot      className="h-4 w-4" />,
+  Database: <Database className="h-4 w-4" />,
+};
+
+function CheckRow({ c }: { c: DiagCheck }) {
+  return (
+    <div className="flex flex-wrap items-start gap-2 rounded-lg border border-border bg-card/50 p-3 text-sm">
+      <div className="mt-0.5">{STATUS_ICON[c.status]}</div>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="font-mono text-xs font-semibold">{c.name}</span>
+          <Badge variant="outline" className={`text-[10px] ${STATUS_BADGE[c.status]}`}>
+            {c.status.replace("_", " ")}
+          </Badge>
+        </div>
+        <p className="mt-0.5 text-xs text-foreground/80">{c.message}</p>
+        {c.detail && <p className="mt-0.5 text-[11px] text-muted-foreground">{c.detail}</p>}
+      </div>
+    </div>
+  );
+}
+
 function Diagnostics() {
-  const testFn = useServerFn(sendTestEmail);
-  const smokeFn = useServerFn(hubSmokeTest);
-  const test = useMutation({
-    mutationFn: async () => (testFn as any)({}),
-    onSuccess: (r: any) => toast.success(`Test email queued to ${r.email}. Check your inbox in ~1 min.`),
+  const testFn  = useServerFn(sendTestEmail);
+  const diagFn  = useServerFn(runApiDiagnostics);
+  const [testTo, setTestTo] = useState("");
+
+  const diag = useMutation({
+    mutationFn: async () => (diagFn as any)({}),
     onError: (e) => toast.error((e as Error).message),
   });
-  const smoke = useMutation({
-    mutationFn: async () => (smokeFn as any)({}),
+  const test = useMutation({
+    mutationFn: async (to?: string) => (testFn as any)({ data: { to: to || undefined } }),
+    onSuccess: (r: any) => toast.success(`✅ Test email sent to ${r.email}. Check your inbox.`),
     onError: (e) => toast.error((e as Error).message),
   });
 
+  const data = diag.data as any;
+  const checks: DiagCheck[] = data?.checks ?? [];
+  const categories = Array.from(new Set(checks.map((c) => c.category)));
+  const okCount  = checks.filter((c) => c.status === "ok").length;
+  const errCount = checks.filter((c) => c.status === "error").length;
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      {/* Action bar */}
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2"><Activity className="h-5 w-5 text-program" /> Hub diagnostics</CardTitle>
-          <CardDescription>Verify email pipeline and core tables are healthy.</CardDescription>
+          <CardTitle className="flex items-center gap-2">
+            <Activity className="h-5 w-5 text-program" /> API &amp; Integration Health
+          </CardTitle>
+          <CardDescription>
+            Test every connected service — Resend, Zoom, AI, and your database — from one place.
+            Admin only.
+          </CardDescription>
         </CardHeader>
-        <CardContent className="flex flex-wrap gap-2">
-          <Button onClick={() => test.mutate()} disabled={test.isPending}>
-            <Mail className="mr-1.5 h-4 w-4" /> {test.isPending ? "Sending..." : "Send test email to me"}
-          </Button>
-          <Button variant="outline" onClick={() => smoke.mutate()} disabled={smoke.isPending}>
-            <RefreshCw className={`mr-1.5 h-4 w-4 ${smoke.isPending ? "animate-spin" : ""}`} /> Run hub smoke test
-          </Button>
-          <RunWeeklyCheckinButton />
+        <CardContent className="space-y-4">
+          <div className="flex flex-wrap gap-2">
+            <Button onClick={() => diag.mutate()} disabled={diag.isPending}>
+              <RefreshCw className={`mr-1.5 h-4 w-4 ${diag.isPending ? "animate-spin" : ""}`} />
+              {diag.isPending ? "Running checks…" : "Run all diagnostics"}
+            </Button>
+            <RunWeeklyCheckinButton />
+          </div>
+
+          {/* Test email sender */}
+          <div className="rounded-lg border border-border p-4 space-y-3">
+            <p className="text-sm font-semibold flex items-center gap-2">
+              <Send className="h-4 w-4 text-program" /> Send test email
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Input
+                type="email"
+                placeholder="Recipient email (leave blank for your own)"
+                value={testTo}
+                onChange={(e) => setTestTo(e.target.value)}
+                className="max-w-xs"
+              />
+              <Button
+                onClick={() => test.mutate(testTo || undefined)}
+                disabled={test.isPending}
+                variant="outline"
+              >
+                <Mail className="mr-1.5 h-4 w-4" />
+                {test.isPending ? "Sending…" : "Send now"}
+              </Button>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              Uses direct Resend API — requires RESEND_API_KEY to be set and valid.
+            </p>
+          </div>
         </CardContent>
       </Card>
 
-      {smoke.data && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Checks</CardTitle>
-            <CardDescription>{(smoke.data as any).checks.filter((c: any) => c.ok).length}/{(smoke.data as any).checks.length} passing</CardDescription>
+      {/* Results summary */}
+      {checks.length > 0 && (
+        <div className="flex flex-wrap gap-3">
+          <div className="flex items-center gap-1.5 rounded-lg border border-green-500/30 bg-green-500/5 px-3 py-2 text-sm font-semibold text-green-500">
+            <CheckCircle2 className="h-4 w-4" /> {okCount} passing
+          </div>
+          {errCount > 0 && (
+            <div className="flex items-center gap-1.5 rounded-lg border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm font-semibold text-destructive">
+              <XCircle className="h-4 w-4" /> {errCount} failed
+            </div>
+          )}
+          <div className="flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs text-muted-foreground">
+            <Clock className="h-3.5 w-3.5" /> {data?.timestamp ? new Date(data.timestamp).toLocaleTimeString() : "—"}
+          </div>
+        </div>
+      )}
+
+      {/* Per-category check cards */}
+      {categories.map((cat) => (
+        <Card key={cat}>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              {CATEGORY_ICON[cat] ?? <Activity className="h-4 w-4" />}
+              {cat}
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-1.5">
-            {(smoke.data as any).checks.map((c: any) => (
-              <div key={c.name} className="flex items-center gap-2 rounded border border-border p-2 text-sm">
-                {c.ok ? <CheckCircle2 className="h-4 w-4 text-green-500" /> : <XCircle className="h-4 w-4 text-destructive" />}
-                <span className="font-medium">{c.name}</span>
-                <span className="text-xs text-muted-foreground ml-auto">{c.detail}</span>
-              </div>
+          <CardContent className="space-y-2">
+            {checks.filter((c) => c.category === cat).map((c) => (
+              <CheckRow key={c.name} c={c} />
             ))}
           </CardContent>
         </Card>
-      )}
+      ))}
 
-      {smoke.data && (smoke.data as any).recentEmails?.length > 0 && (
+      {/* Recent email log */}
+      {data?.recentEmails?.length > 0 && (
         <Card>
-          <CardHeader><CardTitle>Recent emails</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-base">Recent email log</CardTitle>
+            <CardDescription>Last 10 entries from email_send_log</CardDescription>
+          </CardHeader>
           <CardContent className="space-y-1.5">
-            {(smoke.data as any).recentEmails.map((e: any, i: number) => (
-              <div key={i} className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-sm">
-                <Badge variant="outline" className="capitalize">{e.status}</Badge>
-                <span className="font-mono text-xs">{e.template_name}</span>
-                <span className="truncate text-xs text-muted-foreground">{e.recipient_email}</span>
-                <span className="ml-auto text-[10px] text-muted-foreground">{new Date(e.created_at).toLocaleString()}</span>
-                {e.error_message && <p className="w-full text-xs text-destructive">{e.error_message}</p>}
+            {data.recentEmails.map((e: any, i: number) => (
+              <div key={i} className="flex flex-wrap items-center gap-2 rounded border border-border p-2 text-xs">
+                <Badge
+                  variant="outline"
+                  className={`capitalize ${e.status === "sent" ? "border-green-500/40 text-green-500" : e.status === "failed" ? "border-destructive/40 text-destructive" : ""}`}
+                >
+                  {e.status}
+                </Badge>
+                <span className="font-mono">{e.template_name}</span>
+                <span className="truncate text-muted-foreground">{e.recipient_email}</span>
+                <span className="ml-auto text-[10px] text-muted-foreground">
+                  {new Date(e.created_at).toLocaleString()}
+                </span>
+                {e.error_message && (
+                  <p className="w-full text-destructive">{e.error_message}</p>
+                )}
               </div>
             ))}
           </CardContent>
@@ -339,13 +448,13 @@ function RunWeeklyCheckinButton() {
       return res.json();
     },
     onSuccess: (r: any) =>
-      toast.success(`Weekly check-ins queued: ${r.queued} sent, ${r.skipped} skipped`),
+      toast.success(`Weekly check-ins sent: ${r.queued} queued, ${r.skipped} skipped`),
     onError: (e) => toast.error((e as Error).message),
   });
   return (
     <Button variant="outline" onClick={() => run.mutate()} disabled={run.isPending}>
-      <Mail className={`mr-1.5 h-4 w-4 ${run.isPending ? "animate-pulse" : ""}`} />
-      {run.isPending ? "Queuing..." : "Run weekly Zoom check-ins now"}
+      <Zap className={`mr-1.5 h-4 w-4 ${run.isPending ? "animate-pulse" : ""}`} />
+      {run.isPending ? "Running…" : "Run Zoom weekly check-ins"}
     </Button>
   );
 }
