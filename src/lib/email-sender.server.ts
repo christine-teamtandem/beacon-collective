@@ -18,7 +18,7 @@
 import { sanitizeEnv } from "@/lib/config.server";
 
 // Verified sender identity (must match the domain delegated to Lovable / Resend).
-export const SITE_NAME = "Freebleeders Mentorship Hub";
+export const SITE_NAME = "Free Bleeders Mentorship";
 export const FROM_DOMAIN = "mentorship.freebleeders.org";
 export const SENDER_DOMAIN = "notify.mentorship.freebleeders.org";
 export const DEFAULT_FROM = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`;

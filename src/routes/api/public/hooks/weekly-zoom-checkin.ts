@@ -5,7 +5,7 @@ import { createClient } from '@supabase/supabase-js'
 import { TEMPLATES } from '@/lib/email-templates/registry'
 import { buildCalendarLinks } from '@/lib/calendar-links'
 
-const SITE_NAME = 'Freebleeders Mentorship Hub'
+const SITE_NAME = 'Free Bleeders Mentorship'
 const SENDER_DOMAIN = 'notify.mentorship.freebleeders.org'
 const FROM_DOMAIN = 'mentorship.freebleeders.org'
 const DISPLAY_TIMEZONE = 'Asia/Manila'
