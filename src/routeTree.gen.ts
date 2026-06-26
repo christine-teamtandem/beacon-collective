@@ -16,13 +16,13 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as EmailUnsubscribeRouteImport } from './routes/email/unsubscribe'
 import { Route as AuthenticatedWorkbookRouteImport } from './routes/_authenticated/workbook'
 import { Route as AuthenticatedTrackingRouteImport } from './routes/_authenticated/tracking'
+import { Route as AuthenticatedTemplatesRouteImport } from './routes/_authenticated/templates'
 import { Route as AuthenticatedResourcesRouteImport } from './routes/_authenticated/resources'
 import { Route as AuthenticatedReportsRouteImport } from './routes/_authenticated/reports'
 import { Route as AuthenticatedProfileRouteImport } from './routes/_authenticated/profile'
 import { Route as AuthenticatedPeopleRouteImport } from './routes/_authenticated/people'
 import { Route as AuthenticatedMessagesRouteImport } from './routes/_authenticated/messages'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
-import { Route as AuthenticatedTemplatesRouteImport } from './routes/_authenticated/templates'
 import { Route as AuthenticatedComposeRouteImport } from './routes/_authenticated/compose'
 import { Route as AuthenticatedCalendarRouteImport } from './routes/_authenticated/calendar'
 import { Route as AuthenticatedAnnouncementsRouteImport } from './routes/_authenticated/announcements'
@@ -74,6 +74,11 @@ const AuthenticatedTrackingRoute = AuthenticatedTrackingRouteImport.update({
   path: '/tracking',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedTemplatesRoute = AuthenticatedTemplatesRouteImport.update({
+  id: '/templates',
+  path: '/templates',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedResourcesRoute = AuthenticatedResourcesRouteImport.update({
   id: '/resources',
   path: '/resources',
@@ -107,11 +112,6 @@ const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
 const AuthenticatedComposeRoute = AuthenticatedComposeRouteImport.update({
   id: '/compose',
   path: '/compose',
-  getParentRoute: () => AuthenticatedRouteRoute,
-} as any)
-const AuthenticatedTemplatesRoute = AuthenticatedTemplatesRouteImport.update({
-  id: '/templates',
-  path: '/templates',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedCalendarRoute = AuthenticatedCalendarRouteImport.update({
@@ -206,13 +206,13 @@ export interface FileRoutesByFullPath {
   '/announcements': typeof AuthenticatedAnnouncementsRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/compose': typeof AuthenticatedComposeRoute
-  '/templates': typeof AuthenticatedTemplatesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/resources': typeof AuthenticatedResourcesRoute
+  '/templates': typeof AuthenticatedTemplatesRoute
   '/tracking': typeof AuthenticatedTrackingRoute
   '/workbook': typeof AuthenticatedWorkbookRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -237,13 +237,13 @@ export interface FileRoutesByTo {
   '/announcements': typeof AuthenticatedAnnouncementsRoute
   '/calendar': typeof AuthenticatedCalendarRoute
   '/compose': typeof AuthenticatedComposeRoute
-  '/templates': typeof AuthenticatedTemplatesRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
   '/messages': typeof AuthenticatedMessagesRoute
   '/people': typeof AuthenticatedPeopleRoute
   '/profile': typeof AuthenticatedProfileRouteWithChildren
   '/reports': typeof AuthenticatedReportsRoute
   '/resources': typeof AuthenticatedResourcesRoute
+  '/templates': typeof AuthenticatedTemplatesRoute
   '/tracking': typeof AuthenticatedTrackingRoute
   '/workbook': typeof AuthenticatedWorkbookRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -270,13 +270,13 @@ export interface FileRoutesById {
   '/_authenticated/announcements': typeof AuthenticatedAnnouncementsRoute
   '/_authenticated/calendar': typeof AuthenticatedCalendarRoute
   '/_authenticated/compose': typeof AuthenticatedComposeRoute
-  '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
   '/_authenticated/messages': typeof AuthenticatedMessagesRoute
   '/_authenticated/people': typeof AuthenticatedPeopleRoute
   '/_authenticated/profile': typeof AuthenticatedProfileRouteWithChildren
   '/_authenticated/reports': typeof AuthenticatedReportsRoute
   '/_authenticated/resources': typeof AuthenticatedResourcesRoute
+  '/_authenticated/templates': typeof AuthenticatedTemplatesRoute
   '/_authenticated/tracking': typeof AuthenticatedTrackingRoute
   '/_authenticated/workbook': typeof AuthenticatedWorkbookRoute
   '/email/unsubscribe': typeof EmailUnsubscribeRoute
@@ -303,13 +303,13 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/calendar'
     | '/compose'
-    | '/templates'
     | '/dashboard'
     | '/messages'
     | '/people'
     | '/profile'
     | '/reports'
     | '/resources'
+    | '/templates'
     | '/tracking'
     | '/workbook'
     | '/email/unsubscribe'
@@ -334,13 +334,13 @@ export interface FileRouteTypes {
     | '/announcements'
     | '/calendar'
     | '/compose'
-    | '/templates'
     | '/dashboard'
     | '/messages'
     | '/people'
     | '/profile'
     | '/reports'
     | '/resources'
+    | '/templates'
     | '/tracking'
     | '/workbook'
     | '/email/unsubscribe'
@@ -366,13 +366,13 @@ export interface FileRouteTypes {
     | '/_authenticated/announcements'
     | '/_authenticated/calendar'
     | '/_authenticated/compose'
-    | '/_authenticated/templates'
     | '/_authenticated/dashboard'
     | '/_authenticated/messages'
     | '/_authenticated/people'
     | '/_authenticated/profile'
     | '/_authenticated/reports'
     | '/_authenticated/resources'
+    | '/_authenticated/templates'
     | '/_authenticated/tracking'
     | '/_authenticated/workbook'
     | '/email/unsubscribe'
@@ -457,6 +457,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedTrackingRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/templates': {
+      id: '/_authenticated/templates'
+      path: '/templates'
+      fullPath: '/templates'
+      preLoaderRoute: typeof AuthenticatedTemplatesRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/resources': {
       id: '/_authenticated/resources'
       path: '/resources'
@@ -504,13 +511,6 @@ declare module '@tanstack/react-router' {
       path: '/compose'
       fullPath: '/compose'
       preLoaderRoute: typeof AuthenticatedComposeRouteImport
-      parentRoute: typeof AuthenticatedRouteRoute
-    }
-    '/_authenticated/templates': {
-      id: '/_authenticated/templates'
-      path: '/templates'
-      fullPath: '/templates'
-      preLoaderRoute: typeof AuthenticatedTemplatesRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/calendar': {
@@ -637,13 +637,13 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedAnnouncementsRoute: typeof AuthenticatedAnnouncementsRoute
   AuthenticatedCalendarRoute: typeof AuthenticatedCalendarRoute
   AuthenticatedComposeRoute: typeof AuthenticatedComposeRoute
-  AuthenticatedTemplatesRoute: typeof AuthenticatedTemplatesRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
   AuthenticatedMessagesRoute: typeof AuthenticatedMessagesRoute
   AuthenticatedPeopleRoute: typeof AuthenticatedPeopleRoute
   AuthenticatedProfileRoute: typeof AuthenticatedProfileRouteWithChildren
   AuthenticatedReportsRoute: typeof AuthenticatedReportsRoute
   AuthenticatedResourcesRoute: typeof AuthenticatedResourcesRoute
+  AuthenticatedTemplatesRoute: typeof AuthenticatedTemplatesRoute
   AuthenticatedTrackingRoute: typeof AuthenticatedTrackingRoute
   AuthenticatedWorkbookRoute: typeof AuthenticatedWorkbookRoute
   AuthenticatedCurriculumWeekRoute: typeof AuthenticatedCurriculumWeekRoute
@@ -656,13 +656,13 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedAnnouncementsRoute: AuthenticatedAnnouncementsRoute,
   AuthenticatedCalendarRoute: AuthenticatedCalendarRoute,
   AuthenticatedComposeRoute: AuthenticatedComposeRoute,
-  AuthenticatedTemplatesRoute: AuthenticatedTemplatesRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
   AuthenticatedMessagesRoute: AuthenticatedMessagesRoute,
   AuthenticatedPeopleRoute: AuthenticatedPeopleRoute,
   AuthenticatedProfileRoute: AuthenticatedProfileRouteWithChildren,
   AuthenticatedReportsRoute: AuthenticatedReportsRoute,
   AuthenticatedResourcesRoute: AuthenticatedResourcesRoute,
+  AuthenticatedTemplatesRoute: AuthenticatedTemplatesRoute,
   AuthenticatedTrackingRoute: AuthenticatedTrackingRoute,
   AuthenticatedWorkbookRoute: AuthenticatedWorkbookRoute,
   AuthenticatedCurriculumWeekRoute: AuthenticatedCurriculumWeekRoute,

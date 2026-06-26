@@ -51,7 +51,7 @@ export function getResendApiKey(): string {
 export function getResendFrom(): string {
   return (
     sanitizeEnv(process.env.RESEND_FROM_EMAIL) ||
-    "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>"
+    "Free Bleeders Mentorship <noreply@mentorship.freebleeders.org>"
   );
 }
 

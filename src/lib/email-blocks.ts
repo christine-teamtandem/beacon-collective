@@ -115,7 +115,7 @@ ${rows}
           </table>
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #262626;font-family:${BRAND.sans};color:${BRAND.muted};font-size:12px;text-align:center;">
-          Freebleeders Mentorship Hub<br/>
+          Free Bleeders Mentorship<br/>
           <span style="color:#6b6760;">You are receiving this because you are part of our mentorship community.</span>
         </td></tr>
       </table>

@@ -29,14 +29,14 @@ export const BrandLayout = ({ preview, children }: BrandLayoutProps) => (
       <Container style={outer}>
         <Section style={brandBar}>
           <Text style={brandMark}>
-            <span style={brandMarkAccent}>FREEBLEEDERS</span> &nbsp;|&nbsp; MENTORSHIP HUB
+            <span style={brandMarkAccent}>FREE BLEEDERS</span> &nbsp;|&nbsp; MENTORSHIP HUB
           </Text>
         </Section>
         <Container style={card}>{children}</Container>
         <Section>
           <Hr style={hr} />
           <Text style={footer}>
-            Freebleeders Mentorship Hub &middot; Premium mentorship program
+            Free Bleeders Mentorship &middot; Premium mentorship program
           </Text>
           <Text style={footerSub}>
             Questions? Reach us at{' '}

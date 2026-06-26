@@ -26,14 +26,14 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{subject || 'A message from Freebleeders Mentorship Hub'}</Preview>
+      <Preview>{subject || 'A message from Free Bleeders Mentorship'}</Preview>
       <Body style={main}>
         <Container style={outer}>
 
           {/* ── Brand header bar ─────────────────────────────── */}
           <Section style={headerBar}>
             <Text style={headerMarkText}>
-              <span style={headerMarkAccent}>FREEBLEEDERS</span>
+              <span style={headerMarkAccent}>FREE BLEEDERS</span>
               &nbsp;&nbsp;|&nbsp;&nbsp;MENTORSHIP HUB
             </Text>
           </Section>
@@ -69,14 +69,14 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
               {senderRole ? (
                 <span style={attributionRole}>{` (${senderRole})`}</span>
               ) : null}
-              {' '}through the Freebleeders Mentorship Hub.
+              {' '}through the Free Bleeders Mentorship.
             </Text>
 
           </Container>
 
           {/* ── Footer ───────────────────────────────────────── */}
           <Section style={footerSection}>
-            <Text style={footerBrand}>Freebleeders Mentorship Hub</Text>
+            <Text style={footerBrand}>Free Bleeders Mentorship</Text>
             <Text style={footerLinks}>
               <Link href="mailto:support@mentorship.freebleeders.org" style={footerLink}>
                 Contact Support
@@ -91,7 +91,7 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
               </Link>
             </Text>
             <Text style={footerSub}>
-              You received this because you are a member of the Freebleeders Mentorship Hub.
+              You received this because you are a member of the Free Bleeders Mentorship.
             </Text>
           </Section>
 
@@ -104,13 +104,13 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
 export const template = {
   component: ComposedMessage,
   subject: (data: Record<string, any>) =>
-    data.subject || 'Message from Freebleeders Mentorship Hub',
+    data.subject || 'Message from Free Bleeders Mentorship',
   displayName: 'Hub composed message',
   previewData: {
     senderName: 'Tracy Hamler',
     senderRole: 'admin',
     subject: 'Welcome to our mentorship hub',
-    body: 'Hi,\n\nThis is a sample message sent from the hub.\n\nWe look forward to walking this journey with you.\n\nWith intention,\nThe Freebleeders Team',
+    body: 'Hi,\n\nThis is a sample message sent from the hub.\n\nWe look forward to walking this journey with you.\n\nWith intention,\nThe Free Bleeders Team',
   },
 } satisfies TemplateEntry
 

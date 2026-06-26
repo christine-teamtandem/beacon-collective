@@ -32,7 +32,7 @@ export const sendResendEmail = createServerFn({ method: 'POST' })
     if (!lovableKey) throw new Error('LOVABLE_API_KEY is not configured')
     if (!resendKey) throw new Error('RESEND_API_KEY is not configured')
 
-    const from = data.from ?? 'Freebleeders Mentorship Hub <onboarding@resend.dev>'
+    const from = data.from ?? 'Free Bleeders Mentorship <onboarding@resend.dev>'
 
     const response = await fetch(`${GATEWAY_URL}/emails`, {
       method: 'POST',
