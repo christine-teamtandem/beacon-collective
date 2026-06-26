@@ -198,6 +198,45 @@ export type Database = {
         }
         Relationships: []
       }
+      email_templates: {
+        Row: {
+          blocks: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          html: string
+          id: string
+          name: string
+          subject: string | null
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          html?: string
+          id?: string
+          name: string
+          subject?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          html?: string
+          id?: string
+          name?: string
+          subject?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_unsubscribe_tokens: {
         Row: {
           created_at: string
