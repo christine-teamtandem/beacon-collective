@@ -14,45 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      email_templates: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          subject: string | null
-          html: string
-          blocks: Json | null
-          thumbnail_url: string | null
-          created_by: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          subject?: string | null
-          html?: string
-          blocks?: Json | null
-          thumbnail_url?: string | null
-          created_by: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          subject?: string | null
-          html?: string
-          blocks?: Json | null
-          thumbnail_url?: string | null
-          created_by?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       announcements: {
         Row: {
           author_id: string
@@ -423,6 +384,7 @@ export type Database = {
           ends_at: string
           id: string
           mentor_id: string | null
+          participant_id: string | null
           program: Database["public"]["Enums"]["program_type"]
           starts_at: string
           title: string
@@ -440,6 +402,7 @@ export type Database = {
           ends_at: string
           id?: string
           mentor_id?: string | null
+          participant_id?: string | null
           program: Database["public"]["Enums"]["program_type"]
           starts_at: string
           title: string
@@ -457,6 +420,7 @@ export type Database = {
           ends_at?: string
           id?: string
           mentor_id?: string | null
+          participant_id?: string | null
           program?: Database["public"]["Enums"]["program_type"]
           starts_at?: string
           title?: string
