@@ -11,7 +11,7 @@ import { useEffect, type ReactNode } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
 
-import appCss from "../styles.css?url";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 
 function NotFoundComponent() {
@@ -55,12 +55,12 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "freebleeders mentorship hub — Elite Youth Mentorship" },
-      { name: "description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
-      { property: "og:title", content: "freebleeders mentorship hub — Elite Youth Mentorship" },
-      { name: "twitter:title", content: "freebleeders mentorship hub — Elite Youth Mentorship" },
-      { property: "og:description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
-      { name: "twitter:description", content: "Interactive mentorship platform for The Vanguard Brotherhood and The Flow Collective." },
+      { title: `${BRAND_NAME} — Elite Youth Mentorship` },
+      { name: "description", content: `${BRAND_TAGLINE} Interactive mentorship for The Vanguard Brotherhood and The Flow Collective.` },
+      { property: "og:title", content: `${BRAND_NAME} — Elite Youth Mentorship` },
+      { name: "twitter:title", content: `${BRAND_NAME} — Elite Youth Mentorship` },
+      { property: "og:description", content: `${BRAND_TAGLINE} Interactive mentorship for The Vanguard Brotherhood and The Flow Collective.` },
+      { name: "twitter:description", content: `${BRAND_TAGLINE} Interactive mentorship for The Vanguard Brotherhood and The Flow Collective.` },
       { property: "og:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ed200a09-af74-4564-bd8b-568713b6476b" },
       { name: "twitter:image", content: "https://storage.googleapis.com/gpt-engineer-file-uploads/attachments/og-images/ed200a09-af74-4564-bd8b-568713b6476b" },
       { name: "twitter:card", content: "summary_large_image" },

@@ -3,6 +3,7 @@ import {
   Body, Container, Head, Heading, Html, Preview, Text, Section,
 } from '@react-email/components'
 import type { TemplateEntry } from './registry'
+import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 
 interface Props {
   recipient?: string
@@ -12,13 +13,13 @@ interface Props {
 const TestEmail = ({ recipient, triggeredBy }: Props) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Email pipeline test — freebleeders mentorship hub</Preview>
+    <Preview>{`Email pipeline test — ${BRAND_NAME}`}</Preview>
     <Body style={main}>
       <Container style={container}>
         <Heading style={h1}>Your email pipeline is working ✅</Heading>
         <Text style={text}>
-          This is a test email from <strong>freebleeders mentorship hub</strong>.
-          If you received it, sending from <code>notify.mentorship.freebleeders.org</code> is live.
+          This is a test email from <strong>{BRAND_NAME}</strong>.
+          {BRAND_TAGLINE} If you received it, sending from <code>notify.mentorship.freebleeders.org</code> is live.
         </Text>
         <Section style={panel}>
           <Text style={meta}><strong>Recipient:</strong> {recipient || '—'}</Text>
@@ -35,7 +36,7 @@ const TestEmail = ({ recipient, triggeredBy }: Props) => (
 
 export const template = {
   component: TestEmail,
-  subject: '[Test] freebleeders mentorship hub email pipeline',
+  subject: `[Test] ${BRAND_NAME} email pipeline`,
   displayName: 'Pipeline test',
   previewData: { recipient: 'admin@example.test', triggeredBy: 'admin@example.test' },
 } satisfies TemplateEntry

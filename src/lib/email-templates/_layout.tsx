@@ -10,6 +10,8 @@ import {
   Text,
 } from '@react-email/components'
 
+import { BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
+
 interface BrandLayoutProps {
   preview: string
   children: React.ReactNode
@@ -29,14 +31,14 @@ export const BrandLayout = ({ preview, children }: BrandLayoutProps) => (
       <Container style={outer}>
         <Section style={brandBar}>
           <Text style={brandMark}>
-            <span style={brandMarkAccent}>FREEBLEEDERS</span> &nbsp;|&nbsp; MENTORSHIP HUB
+            <span style={brandMarkAccent}>FREE BLEEDERS</span> &nbsp;|&nbsp; MENTORSHIP
           </Text>
         </Section>
         <Container style={card}>{children}</Container>
         <Section>
           <Hr style={hr} />
           <Text style={footer}>
-            Freebleeders Mentorship Hub &middot; Premium mentorship program
+            {BRAND_NAME} &middot; {BRAND_TAGLINE}
           </Text>
           <Text style={footerSub}>
             Questions? Reach us at{' '}

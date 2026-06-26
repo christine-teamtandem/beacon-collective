@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { SidebarProvider, SidebarTrigger, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/AppSidebar";
 import { useUserContext } from "@/hooks/useSession";
-import { Heart, Shield } from "lucide-react";
+import { BRAND_NAME } from "@/lib/brand";
 import { useState } from "react";
 import { DonateModal } from "@/components/DonateModal";
 import { Button } from "@/components/ui/button";
@@ -33,7 +33,7 @@ function AuthenticatedLayout() {
   const [donateOpen, setDonateOpen] = useState(false);
   const themeClass = program === "flow" ? "flow-theme" : "";
   const ProgramIcon = program === "flow" ? Heart : Shield;
-  const programName = program === "flow" ? "Flow Collective" : program === "vanguard" ? "Vanguard Brotherhood" : "Mentorship Hub";
+  const programName = program === "flow" ? "Flow Collective" : program === "vanguard" ? "Vanguard Brotherhood" : BRAND_NAME;
 
   return (
     <div className={themeClass}>

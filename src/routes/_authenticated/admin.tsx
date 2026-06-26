@@ -142,6 +142,7 @@ function Accounts() {
   const { data: accounts = [] } = useAllAccounts();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState<Role | "all">("all");
+  const [actingOn, setActingOn] = useState<string | null>(null);
 
   const filtered = accounts.filter((a) => {
     if (search && !(a.full_name || "").toLowerCase().includes(search.toLowerCase())) return false;
@@ -151,21 +152,32 @@ function Accounts() {
 
   const del = useMutation({
     mutationFn: async (userId: string) => delFn({ data: { userId } }),
+    onMutate: (userId) => setActingOn(userId),
+    onSettled: () => setActingOn(null),
     onSuccess: () => { toast.success("Account deleted."); qc.invalidateQueries({ queryKey: ["all-accounts"] }); },
     onError: (e) => toast.error((e as Error).message),
   });
   const reset = useMutation({
     mutationFn: async (userId: string) => resetFn({ data: { userId } }),
+    onMutate: (userId) => setActingOn(userId),
+    onSettled: () => setActingOn(null),
     onSuccess: (r: any) => toast.success(`Password reset email sent to ${r.email}`),
     onError: (e) => toast.error((e as Error).message),
   });
   const unlock = useMutation({
     mutationFn: async (userId: string) => unlockFn({ data: { userId } }),
-    onSuccess: () => toast.success("Account unlocked."),
+    onMutate: (userId) => setActingOn(userId),
+    onSettled: () => setActingOn(null),
+    onSuccess: () => {
+      toast.success("Account unlocked and marked active.");
+      qc.invalidateQueries({ queryKey: ["all-accounts"] });
+    },
     onError: (e) => toast.error((e as Error).message),
   });
   const resend = useMutation({
     mutationFn: async (userId: string) => resendFn({ data: { userId } }),
+    onMutate: (userId) => setActingOn(userId),
+    onSettled: () => setActingOn(null),
     onSuccess: (r: any) => toast.success(`Login link sent to ${r.email}`),
     onError: (e) => toast.error((e as Error).message),
   });
@@ -209,19 +221,32 @@ function Accounts() {
                 <Button size="icon" variant="ghost" aria-label="Account actions"><MoreVertical className="h-4 w-4" /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => reset.mutate(a.id)}>
+                <DropdownMenuItem
+                  disabled={actingOn === a.id}
+                  onSelect={(e) => { e.preventDefault(); reset.mutate(a.id); }}
+                >
                   <KeyRound className="mr-2 h-4 w-4" /> Send password reset
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => resend.mutate(a.id)}>
+                <DropdownMenuItem
+                  disabled={actingOn === a.id}
+                  onSelect={(e) => { e.preventDefault(); resend.mutate(a.id); }}
+                >
                   <Mail className="mr-2 h-4 w-4" /> Resend login link
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => unlock.mutate(a.id)}>
+                <DropdownMenuItem
+                  disabled={actingOn === a.id}
+                  onSelect={(e) => { e.preventDefault(); unlock.mutate(a.id); }}
+                >
                   <Unlock className="mr-2 h-4 w-4" /> Unlock account
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   className="text-destructive focus:text-destructive"
-                  onClick={() => { if (confirm(`Delete ${a.full_name}? This cannot be undone.`)) del.mutate(a.id); }}
+                  disabled={actingOn === a.id}
+                  onSelect={(e) => {
+                    e.preventDefault();
+                    if (confirm(`Delete ${a.full_name}? This cannot be undone.`)) del.mutate(a.id);
+                  }}
                 >
                   <Trash2 className="mr-2 h-4 w-4" /> Delete account
                 </DropdownMenuItem>
@@ -362,7 +387,7 @@ function Diagnostics() {
               </Button>
             </div>
             <p className="text-[11px] text-muted-foreground">
-              Uses direct Resend API — requires RESEND_API_KEY to be set and valid.
+              Sends via the Lovable email connector (LOVABLE_API_KEY) or direct Resend if configured.
             </p>
           </div>
         </CardContent>
@@ -439,8 +464,14 @@ function RunWeeklyCheckinButton() {
   const trigger = useServerFn(triggerWeeklyZoomCheckin);
   const run = useMutation({
     mutationFn: async () => trigger({}),
-    onSuccess: (r: any) =>
-      toast.success(`Weekly check-ins sent: ${r.queued} queued, ${r.skipped} skipped`),
+    onSuccess: (r: any) => {
+      toast.success(
+        `Weekly check-ins: ${r.queued ?? 0} queued, ${r.skipped ?? 0} skipped, ${r.sessions ?? 0} session(s) scanned`,
+      );
+      if (r.errors?.length) {
+        toast.error(r.errors.slice(0, 3).join(" · "), { duration: 12000 });
+      }
+    },
     onError: (e) => toast.error((e as Error).message),
   });
 

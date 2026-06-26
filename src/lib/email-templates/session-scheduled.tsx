@@ -9,11 +9,12 @@ interface Props {
   recipientName?: string
   recipientRole?: 'mentee' | 'mentor'
   mentorName?: string
-  menteeName?: string
+  participantName?: string
   programLabel?: string
   sessionTitle?: string
   whenLabel?: string
   timezoneLabel?: string
+  sessionNotes?: string
   joinUrl?: string
   meetingId?: string
   passcode?: string
@@ -23,9 +24,9 @@ interface Props {
   yahooCalUrl?: string
 }
 
-const WeeklyZoomCheckIn = ({
-  recipientName, recipientRole = 'mentee', mentorName, menteeName, programLabel,
-  sessionTitle = 'Weekly Mentorship Check-in', whenLabel, timezoneLabel,
+const SessionScheduledEmail = ({
+  recipientName, recipientRole = 'mentee', mentorName, participantName, programLabel,
+  sessionTitle = 'Mentorship session', whenLabel, timezoneLabel, sessionNotes,
   joinUrl, meetingId, passcode, startUrl,
   googleCalUrl, outlookCalUrl, yahooCalUrl,
 }: Props) => {
@@ -33,7 +34,7 @@ const WeeklyZoomCheckIn = ({
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{`Your weekly check-in${whenLabel ? ` — ${whenLabel}` : ''}`}</Preview>
+      <Preview>{`Session scheduled${whenLabel ? ` — ${whenLabel}` : ''}`}</Preview>
       <Body style={main}>
         <Container style={container}>
           <Text style={brand}>{BRAND_EMAIL_MARK}</Text>
@@ -45,8 +46,8 @@ const WeeklyZoomCheckIn = ({
           </Text>
           <Text style={text}>
             {isMentor
-              ? `This is your weekly reminder for the upcoming check-in${menteeName ? ` with ${menteeName}` : ''}. Please review the session details below and start the meeting a few minutes early.`
-              : `This is your weekly reminder for your upcoming mentorship check-in${mentorName ? ` with ${mentorName}` : ''}. Please join on time and prepared.`}
+              ? `Your Vanguard Brotherhood session${participantName ? ` with ${participantName}` : ''} is confirmed. A Zoom room has been created and calendar links are below.`
+              : `Your mentorship session${mentorName ? ` with ${mentorName}` : ''} is confirmed. Tap the gold button below to join on Zoom when it's time.`}
           </Text>
 
           <Section style={panel}>
@@ -55,9 +56,22 @@ const WeeklyZoomCheckIn = ({
             {timezoneLabel && <Text style={panelMeta}>{timezoneLabel}</Text>}
           </Section>
 
-          {joinUrl && (
+          {sessionNotes && (
+            <Section style={detailBlock}>
+              <Text style={panelLabel}>Session notes</Text>
+              <Text style={detailRow}>{sessionNotes}</Text>
+            </Section>
+          )}
+
+          {joinUrl && !isMentor && (
             <Section style={ctaWrap}>
-              <Button href={joinUrl} style={primaryBtn}>Join Zoom Meeting</Button>
+              <Button href={joinUrl} style={goldBtn}>Easy Click — Join Zoom</Button>
+            </Section>
+          )}
+
+          {joinUrl && isMentor && (
+            <Section style={ctaWrap}>
+              <Button href={joinUrl} style={primaryBtn}>Join as participant</Button>
             </Section>
           )}
 
@@ -86,17 +100,11 @@ const WeeklyZoomCheckIn = ({
             <Section style={calWrap}>
               <Text style={calLabel}>Add to your calendar</Text>
               <Text style={calRow}>
-                {googleCalUrl && (
-                  <Link href={googleCalUrl} style={calLink}>Google</Link>
-                )}
+                {googleCalUrl && <Link href={googleCalUrl} style={calLink}>Google</Link>}
                 {googleCalUrl && outlookCalUrl && <span style={calSep}>·</span>}
-                {outlookCalUrl && (
-                  <Link href={outlookCalUrl} style={calLink}>Outlook</Link>
-                )}
+                {outlookCalUrl && <Link href={outlookCalUrl} style={calLink}>Outlook</Link>}
                 {(googleCalUrl || outlookCalUrl) && yahooCalUrl && <span style={calSep}>·</span>}
-                {yahooCalUrl && (
-                  <Link href={yahooCalUrl} style={calLink}>Yahoo</Link>
-                )}
+                {yahooCalUrl && <Link href={yahooCalUrl} style={calLink}>Yahoo</Link>}
               </Text>
             </Section>
           )}
@@ -105,9 +113,6 @@ const WeeklyZoomCheckIn = ({
             <>
               <Hr style={hr} />
               <Text style={hostHeading}>Host controls</Text>
-              <Text style={text}>
-                Use the host start link below to open the meeting with host privileges.
-              </Text>
               <Section style={ctaWrap}>
                 <Button href={startUrl} style={secondaryBtn}>Start Meeting (Host)</Button>
               </Section>
@@ -116,8 +121,7 @@ const WeeklyZoomCheckIn = ({
 
           <Hr style={hr} />
           <Text style={footer}>
-            Sent from {BRAND_NAME}. {BRAND_TAGLINE} If this session no longer
-            applies to you, please contact your program lead.
+            Sent from {BRAND_NAME}. {BRAND_TAGLINE} Questions? Contact your program lead.
           </Text>
         </Container>
       </Body>
@@ -126,10 +130,10 @@ const WeeklyZoomCheckIn = ({
 }
 
 export const template = {
-  component: WeeklyZoomCheckIn,
+  component: SessionScheduledEmail,
   subject: (d: Record<string, any>) =>
-    `Weekly check-in: ${d.sessionTitle || 'Mentorship session'}${d.whenLabel ? ` — ${d.whenLabel}` : ''}`,
-  displayName: 'Weekly Zoom check-in',
+    `Session confirmed: ${d.sessionTitle || 'Mentorship session'}${d.whenLabel ? ` — ${d.whenLabel}` : ''}`,
+  displayName: 'Session scheduled confirmation',
   previewData: {
     recipientName: 'Marcus',
     recipientRole: 'mentee',
@@ -139,18 +143,20 @@ export const template = {
     whenLabel: 'Monday, Jun 29 · 7:00 PM',
     timezoneLabel: 'Asia/Manila (PHT)',
     joinUrl: 'https://zoom.us/j/1234567890',
-    meetingId: '123 456 7890',
+    meetingId: '1234567890',
     passcode: '482915',
+    googleCalUrl: 'https://calendar.google.com/calendar/render',
+    outlookCalUrl: 'https://outlook.live.com/calendar/0/deeplink/compose',
   },
 } satisfies TemplateEntry
 
-export default WeeklyZoomCheckIn
+export default SessionScheduledEmail
 
-// Black + deep crimson + gold sophisticated palette
 const main = { backgroundColor: '#ffffff', fontFamily: 'Inter, Arial, sans-serif' }
 const container = {
   padding: '32px 28px', maxWidth: '600px', margin: '0 auto',
   backgroundColor: '#0b0b0b', borderRadius: '14px', color: '#f5f5f4',
+  border: '1px solid #C9A84C',
 }
 const brand = {
   fontSize: '10px', color: '#c9a14a', letterSpacing: '0.28em',
@@ -158,7 +164,7 @@ const brand = {
 }
 const h1 = {
   fontSize: '26px', fontWeight: 700 as const, color: '#f5f5f4',
-  margin: '0 0 10px', lineHeight: '1.25',
+  margin: '0 0 10px', lineHeight: '1.25', fontFamily: 'Georgia, serif',
 }
 const pill = {
   display: 'inline-block', fontSize: '11px', fontWeight: 600 as const,
@@ -167,10 +173,10 @@ const pill = {
   textTransform: 'uppercase' as const,
 }
 const greeting = { fontSize: '15px', color: '#f5f5f4', margin: '4px 0 8px', fontWeight: 600 as const }
-const text = { fontSize: '14px', color: '#d6d3d1', lineHeight: '1.65', margin: '0 0 16px' }
+const text = { fontSize: '14px', color: '#E8E4DD', lineHeight: '1.65', margin: '0 0 16px' }
 const panel = {
   backgroundColor: '#141414', border: '1px solid #2a2a2a',
-  borderLeft: '3px solid #8b0a1a', borderRadius: '10px',
+  borderLeft: '3px solid #8B0000', borderRadius: '10px',
   padding: '14px 18px', margin: '18px 0',
 }
 const panelLabel = {
@@ -180,8 +186,13 @@ const panelLabel = {
 const panelValue = { fontSize: '17px', color: '#f5f5f4', margin: 0, fontWeight: 600 as const }
 const panelMeta = { fontSize: '12px', color: '#a8a29e', margin: '4px 0 0' }
 const ctaWrap = { textAlign: 'center' as const, margin: '22px 0' }
+const goldBtn = {
+  backgroundColor: '#C9A84C', color: '#0a0a0a', padding: '14px 32px',
+  borderRadius: '8px', fontWeight: 700 as const, fontSize: '15px',
+  textDecoration: 'none', display: 'inline-block',
+}
 const primaryBtn = {
-  backgroundColor: '#8b0a1a', color: '#ffffff', padding: '13px 28px',
+  backgroundColor: '#8B0000', color: '#ffffff', padding: '13px 28px',
   borderRadius: '8px', fontWeight: 600 as const, fontSize: '15px',
   textDecoration: 'none', display: 'inline-block',
 }
@@ -195,7 +206,7 @@ const detailBlock = {
   backgroundColor: '#0f0f0f', border: '1px solid #2a2a2a',
   borderRadius: '10px', padding: '14px 18px', margin: '6px 0 4px',
 }
-const detailRow = { fontSize: '13px', color: '#d6d3d1', margin: '6px 0', lineHeight: '1.5', wordBreak: 'break-all' as const }
+const detailRow = { fontSize: '13px', color: '#E8E4DD', margin: '6px 0', lineHeight: '1.5', wordBreak: 'break-all' as const }
 const detailKey = { color: '#c9a14a', fontWeight: 600 as const }
 const detailVal = { color: '#f5f5f4', fontWeight: 600 as const }
 const linkStyle = { color: '#c9a14a', textDecoration: 'underline' }

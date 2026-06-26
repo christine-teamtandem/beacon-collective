@@ -1,6 +1,7 @@
 import { createServerFn } from '@tanstack/react-start'
 import { z } from 'zod'
 import { requireSupabaseAuth } from '@/integrations/supabase/auth-middleware'
+import { BRAND_FROM_EMAIL } from '@/lib/brand'
 
 const GATEWAY_URL = 'https://connector-gateway.lovable.dev/resend'
 
@@ -32,7 +33,7 @@ export const sendResendEmail = createServerFn({ method: 'POST' })
     if (!lovableKey) throw new Error('LOVABLE_API_KEY is not configured')
     if (!resendKey) throw new Error('RESEND_API_KEY is not configured')
 
-    const from = data.from ?? 'Freebleeders Mentorship Hub <onboarding@resend.dev>'
+    const from = data.from ?? BRAND_FROM_EMAIL
 
     const response = await fetch(`${GATEWAY_URL}/emails`, {
       method: 'POST',

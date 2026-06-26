@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { AppHeader } from "@/components/AppHeader";
 import { toast } from "sonner";
 import { Shield, AlertTriangle } from "lucide-react";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 const searchSchema = z.object({ program: z.enum(["vanguard", "flow"]).optional() });
 
@@ -32,8 +33,8 @@ export const Route = createFileRoute("/auth")({
   validateSearch: searchSchema,
   head: () => ({
     meta: [
-      { title: "Sign in — freebleeders mentorship hub" },
-      { name: "description", content: "Sign in or create your mentorship account." },
+      { title: `Sign in — ${BRAND_NAME}` },
+      { name: "description", content: BRAND_TAGLINE },
     ],
   }),
   component: AuthPage,
@@ -71,8 +72,8 @@ function AuthPage() {
             <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-lg bg-gradient-gold">
               <Shield className="h-6 w-6 text-primary-foreground" />
             </div>
-            <h1 className="mt-4 font-display text-3xl font-bold">Welcome</h1>
-            <p className="text-sm text-muted-foreground mt-1">Sign in or create your account</p>
+            <h1 className="mt-4 font-display text-3xl font-bold">{BRAND_NAME}</h1>
+            <p className="text-sm text-muted-foreground mt-1">{BRAND_TAGLINE}</p>
           </div>
 
           <div className="rounded-xl border border-border bg-card p-6 shadow-elegant">

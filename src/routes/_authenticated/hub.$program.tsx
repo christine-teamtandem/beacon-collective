@@ -115,7 +115,14 @@ function HubInner({ program }: { program: "vanguard" | "flow" }) {
               {upcoming.length === 0 && <p className="text-sm text-muted-foreground">Nothing scheduled.</p>}
               {upcoming.map((s) => (
                 <div key={s.id} className="rounded-lg border border-border p-3">
-                  <p className="font-semibold">{s.title}</p>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <p className="font-semibold">{s.title}</p>
+                    {s.zoom_url && (
+                      <Badge variant="outline" className="text-[10px] border-emerald-600/40 text-emerald-700 dark:text-emerald-400">
+                        Zoom ready
+                      </Badge>
+                    )}
+                  </div>
                   <p className="text-xs text-muted-foreground">{new Date(s.starts_at).toLocaleString()}</p>
                 </div>
               ))}

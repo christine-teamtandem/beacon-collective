@@ -3,8 +3,6 @@ import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 
 const ZOOM_AUTH = "https://zoom.us/oauth/authorize";
-const ZOOM_TOKEN = "https://zoom.us/oauth/token";
-const ZOOM_API = "https://api.zoom.us/v2";
 
 export const getZoomConnection = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
@@ -58,6 +56,7 @@ export const getZoomAuthUrl = createServerFn({ method: "POST" })
       client_id: clientId,
       redirect_uri: redirectUri,
       state,
+      scope: "meeting:write user:read:email user:read:user",
     });
     return { url: `${ZOOM_AUTH}?${params.toString()}`, redirectUri };
   });
@@ -72,39 +71,6 @@ export const disconnectZoom = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
-
-async function refreshIfNeeded(userId: string) {
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  const { data: conn } = await supabaseAdmin
-    .from("zoom_connections")
-    .select("*")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if (!conn) throw new Error("Zoom is not connected. Click Connect Zoom first.");
-  if (new Date(conn.expires_at).getTime() - 60_000 > Date.now()) return conn;
-
-  const { getZoomCredentials } = await import("@/lib/config.server");
-  const { clientId, clientSecret } = getZoomCredentials();
-  const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
-  const res = await fetch(ZOOM_TOKEN, {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${basic}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({ grant_type: "refresh_token", refresh_token: conn.refresh_token }),
-  });
-  if (!res.ok) throw new Error(`Zoom refresh failed: ${await res.text()}`);
-  const tok = await res.json();
-  const updated = {
-    access_token: tok.access_token,
-    refresh_token: tok.refresh_token ?? conn.refresh_token,
-    expires_at: new Date(Date.now() + (tok.expires_in ?? 3600) * 1000).toISOString(),
-    scope: tok.scope ?? conn.scope,
-  };
-  await supabaseAdmin.from("zoom_connections").update(updated).eq("user_id", userId);
-  return { ...conn, ...updated };
-}
 
 const CreateInput = z.object({ sessionId: z.string().uuid() });
 
@@ -126,39 +92,25 @@ export const createZoomMeetingForSession = createServerFn({ method: "POST" })
       throw new Error("Only the session creator or an admin can create the Zoom meeting.");
     }
 
-    const conn = await refreshIfNeeded(context.userId);
-    const duration = Math.max(15, Math.round(
-      (new Date(session.ends_at).getTime() - new Date(session.starts_at).getTime()) / 60000
-    ));
-
-    const res = await fetch(`${ZOOM_API}/users/me/meetings`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${conn.access_token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        topic: session.title,
-        type: 2, // scheduled
-        start_time: new Date(session.starts_at).toISOString(),
-        duration,
-        timezone: "UTC",
-        agenda: session.description ?? undefined,
-        settings: { join_before_host: false, waiting_room: true, mute_upon_entry: true },
-      }),
+    // Use the session mentor's Zoom connection (same path as the weekly check-in hook).
+    const { ensureZoomMeetingForSession } = await import("@/lib/zoom.server");
+    const zoom = await ensureZoomMeetingForSession({
+      id: session.id,
+      title: session.title,
+      description: session.description,
+      starts_at: session.starts_at,
+      ends_at: session.ends_at,
+      mentor_id: session.mentor_id ?? "",
+      zoom_url: session.zoom_url,
+      zoom_meeting_id: session.zoom_meeting_id,
+      zoom_start_url: session.zoom_start_url,
+      zoom_passcode: session.zoom_passcode,
     });
-    if (!res.ok) throw new Error(`Zoom create failed: ${await res.text()}`);
-    const meeting = await res.json();
+    if (!zoom) {
+      throw new Error(
+        "Could not create Zoom meeting — the session mentor must connect Zoom first (Calendar → Connect Zoom).",
+      );
+    }
 
-    await supabaseAdmin
-      .from("sessions")
-      .update({
-        zoom_url: meeting.join_url,
-        zoom_meeting_id: String(meeting.id),
-        zoom_start_url: meeting.start_url,
-        zoom_passcode: meeting.password ?? null,
-      })
-      .eq("id", session.id);
-
-    return { ok: true, joinUrl: meeting.join_url, meetingId: String(meeting.id) };
+    return { ok: true, joinUrl: zoom.zoom_url, meetingId: zoom.zoom_meeting_id };
   });

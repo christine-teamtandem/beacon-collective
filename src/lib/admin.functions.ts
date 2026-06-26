@@ -97,6 +97,76 @@ export const deleteAccount = createServerFn({ method: "POST" })
 
 const UserIdInput = z.object({ userId: z.string().uuid() });
 
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
+
+/** Generate a Supabase auth link and deliver it through our email pipeline. */
+async function sendAdminAuthEmail(
+  supabaseAdmin: Awaited<typeof import("@/integrations/supabase/client.server")>["supabaseAdmin"],
+  email: string,
+  type: "magiclink" | "recovery",
+  redirectTo: string,
+) {
+  const { data: linkData, error: linkErr } = await supabaseAdmin.auth.admin.generateLink({
+    type,
+    email,
+    options: { redirectTo },
+  });
+  if (linkErr) throw new Error(linkErr.message);
+
+  const actionLink = linkData.properties?.action_link;
+  if (!actionLink) throw new Error("Failed to generate auth link.");
+
+  const { render } = await import("@react-email/components");
+  const React = await import("react");
+  const { MagicLinkEmail } = await import("@/lib/email-templates/magic-link");
+  const { RecoveryEmail } = await import("@/lib/email-templates/recovery");
+
+  const Template = type === "magiclink" ? MagicLinkEmail : RecoveryEmail;
+  const subject =
+    type === "magiclink"
+      ? `Your login link — ${BRAND_NAME}`
+      : `Reset your password — ${BRAND_NAME}`;
+  const messageId = `admin-${type}-${email}-${Date.now()}`;
+
+  const element = React.createElement(Template, {
+    siteName: BRAND_NAME,
+    confirmationUrl: actionLink,
+  });
+  const html = await render(element);
+  const text = await render(element, { plainText: true });
+
+  let status: "sent" | "failed" = "sent";
+  let errorMessage: string | null = null;
+  try {
+    const { sendBrandedEmail } = await import("@/lib/email-sender.server");
+    const { getResendFrom } = await import("@/lib/config.server");
+    const res = await sendBrandedEmail({
+      to: email,
+      subject,
+      html,
+      text,
+      messageId,
+      from: getResendFrom(),
+      label: type,
+    });
+    if (!res.ok) throw new Error(res.error ?? "Email send failed");
+  } catch (e) {
+    status = "failed";
+    errorMessage = e instanceof Error ? e.message : String(e);
+    throw e;
+  } finally {
+    await supabaseAdmin.from("email_send_log").insert({
+      message_id: messageId,
+      template_name: type,
+      recipient_email: email,
+      status,
+      error_message: errorMessage,
+    });
+  }
+
+  return { ok: true as const, email };
+}
+
 export const sendPasswordReset = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => UserIdInput.parse(d))
@@ -105,11 +175,12 @@ export const sendPasswordReset = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: u, error: gErr } = await supabaseAdmin.auth.admin.getUserById(data.userId);
     if (gErr || !u.user?.email) throw new Error(gErr?.message || "User not found");
-    const { error } = await supabaseAdmin.auth.resetPasswordForEmail(u.user.email, {
-      redirectTo: `${getSiteUrl()}/auth?reset=1`,
-    });
-    if (error) throw new Error(error.message);
-    return { ok: true, email: u.user.email };
+    return sendAdminAuthEmail(
+      supabaseAdmin,
+      u.user.email,
+      "recovery",
+      `${getSiteUrl()}/auth?reset=1`,
+    );
   });
 
 export const unlockAccount = createServerFn({ method: "POST" })
@@ -122,6 +193,12 @@ export const unlockAccount = createServerFn({ method: "POST" })
       ban_duration: "none",
     } as any);
     if (error) throw new Error(error.message);
+
+    await supabaseAdmin
+      .from("profiles")
+      .update({ status: "active" })
+      .eq("id", data.userId);
+
     return { ok: true };
   });
 
@@ -133,14 +210,12 @@ export const resendLoginEmail = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
     const { data: u, error: gErr } = await supabaseAdmin.auth.admin.getUserById(data.userId);
     if (gErr || !u.user?.email) throw new Error(gErr?.message || "User not found");
-    // Generate magiclink — Supabase fires the auth hook → branded email
-    const { error } = await supabaseAdmin.auth.admin.generateLink({
-      type: "magiclink",
-      email: u.user.email,
-      options: { redirectTo: `${getSiteUrl()}/dashboard` },
-    });
-    if (error) throw new Error(error.message);
-    return { ok: true, email: u.user.email };
+    return sendAdminAuthEmail(
+      supabaseAdmin,
+      u.user.email,
+      "magiclink",
+      `${getSiteUrl()}/dashboard`,
+    );
   });
 
 async function sendViaConnector(
@@ -179,7 +254,7 @@ export const sendTestEmail = createServerFn({ method: "POST" })
     let status: "sent" | "failed" = "sent";
     let errorMessage: string | null = null;
     try {
-      await sendViaConnector(to, "[Test] Freebleeders Mentorship Hub — Email Pipeline", html, text, messageId);
+      await sendViaConnector(to, `[Test] ${BRAND_NAME} — Email Pipeline`, html, text, messageId);
     } catch (e) {
       status = "failed";
       errorMessage = e instanceof Error ? e.message : String(e);
@@ -307,6 +382,28 @@ export const runApiDiagnostics = createServerFn({ method: "POST" })
         : "Set PUBLIC_SITE_URL=https://mentorship.freebleeders.org in Lovable settings",
     });
 
+    const checkinSecret = process.env.CHECKIN_WEBHOOK_SECRET;
+    checks.push({
+      name: "CHECKIN_WEBHOOK_SECRET", category: "Zoom",
+      status: checkinSecret ? "ok" : "warning",
+      message: checkinSecret ? "Configured" : "Not set",
+      detail: checkinSecret
+        ? "Protects POST /api/public/hooks/weekly-zoom-checkin — use Admin → Run Zoom weekly check-ins to test"
+        : "Generate a random secret (e.g. openssl rand -hex 32) and set CHECKIN_WEBHOOK_SECRET in Lovable settings",
+    });
+
+    const { count: zoomConnCount, error: zoomConnErr } = await supabaseAdmin
+      .from("zoom_connections")
+      .select("*", { count: "exact", head: true });
+    checks.push({
+      name: "Zoom connections", category: "Zoom",
+      status: zoomConnErr ? "error" : (zoomConnCount ?? 0) > 0 ? "ok" : "warning",
+      message: zoomConnErr ? zoomConnErr.message : `${zoomConnCount ?? 0} mentor(s) connected`,
+      detail: (zoomConnCount ?? 0) > 0
+        ? "At least one user has completed Zoom OAuth — weekly check-ins can create meetings"
+        : "No Zoom connections yet — a mentor must click Connect Zoom on the Calendar page",
+    });
+
     // ── 3. Lovable AI Gateway ────────────────────────────────────────────────
     const aiKey = process.env.LOVABLE_API_KEY;
     checks.push({
@@ -319,7 +416,7 @@ export const runApiDiagnostics = createServerFn({ method: "POST" })
     });
 
     // ── 4. Supabase / database ───────────────────────────────────────────────
-    for (const t of ["profiles", "user_roles", "email_send_log", "sessions", "mentor_assignments"]) {
+    for (const t of ["profiles", "user_roles", "email_send_log", "sessions", "mentor_assignments", "weekly_checkin_sends", "zoom_connections"]) {
       const { count, error } = await (supabaseAdmin as any)
         .from(t).select("*", { count: "exact", head: true });
       checks.push({

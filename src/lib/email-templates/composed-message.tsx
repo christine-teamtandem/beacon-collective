@@ -12,6 +12,7 @@ import {
   Hr,
 } from '@react-email/components'
 import type { TemplateEntry } from './registry'
+import { BRAND_EMAIL_HEADER, BRAND_NAME, BRAND_TAGLINE } from '@/lib/brand'
 
 interface Props {
   senderName?: string
@@ -26,15 +27,15 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
   return (
     <Html lang="en" dir="ltr">
       <Head />
-      <Preview>{subject || 'A message from Freebleeders Mentorship Hub'}</Preview>
+      <Preview>{subject || `A message from ${BRAND_NAME}`}</Preview>
       <Body style={main}>
         <Container style={outer}>
 
           {/* ── Brand header bar ─────────────────────────────── */}
           <Section style={headerBar}>
             <Text style={headerMarkText}>
-              <span style={headerMarkAccent}>FREEBLEEDERS</span>
-              &nbsp;&nbsp;|&nbsp;&nbsp;MENTORSHIP HUB
+              <span style={headerMarkAccent}>FREE BLEEDERS</span>
+              &nbsp;&nbsp;|&nbsp;&nbsp;MENTORSHIP
             </Text>
           </Section>
 
@@ -69,14 +70,15 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
               {senderRole ? (
                 <span style={attributionRole}>{` (${senderRole})`}</span>
               ) : null}
-              {' '}through the Freebleeders Mentorship Hub.
+              {' '}through {BRAND_NAME}.
             </Text>
 
           </Container>
 
           {/* ── Footer ───────────────────────────────────────── */}
           <Section style={footerSection}>
-            <Text style={footerBrand}>Freebleeders Mentorship Hub</Text>
+            <Text style={footerBrand}>{BRAND_NAME}</Text>
+            <Text style={footerSub}>{BRAND_TAGLINE}</Text>
             <Text style={footerLinks}>
               <Link href="mailto:support@mentorship.freebleeders.org" style={footerLink}>
                 Contact Support
@@ -91,7 +93,7 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
               </Link>
             </Text>
             <Text style={footerSub}>
-              You received this because you are a member of the Freebleeders Mentorship Hub.
+              You received this because you are a member of {BRAND_NAME}.
             </Text>
           </Section>
 
@@ -104,13 +106,13 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
 export const template = {
   component: ComposedMessage,
   subject: (data: Record<string, any>) =>
-    data.subject || 'Message from Freebleeders Mentorship Hub',
+    data.subject || `Message from ${BRAND_NAME}`,
   displayName: 'Hub composed message',
   previewData: {
     senderName: 'Tracy Hamler',
     senderRole: 'admin',
-    subject: 'Welcome to our mentorship hub',
-    body: 'Hi,\n\nThis is a sample message sent from the hub.\n\nWe look forward to walking this journey with you.\n\nWith intention,\nThe Freebleeders Team',
+    subject: `Welcome to ${BRAND_NAME}`,
+    body: `Hi,\n\nThis is a sample message sent from the hub.\n\n${BRAND_TAGLINE}\n\nWith intention,\nThe Free Bleeders Team`,
   },
 } satisfies TemplateEntry
 

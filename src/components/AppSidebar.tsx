@@ -12,8 +12,10 @@ import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
   Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck,
   Mail, UserCircle2, ChevronRight, Send, Clock, History, CalendarClock, LayoutTemplate,
+  Presentation,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { BRAND_NAME } from "@/lib/brand";
 import { useState } from "react";
 
 type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
@@ -49,6 +51,7 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
       ]},
       { label: "Curriculum", items: [
         { title: "12-Week Curriculum", url: "/curriculum", icon: Shield },
+        { title: "Cohort Presentations", url: "/presentations", icon: Presentation },
       ]},
       { label: "Account", items: [profileItem] },
     ];
@@ -67,6 +70,7 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
       ]},
       { label: "Curriculum", items: [
         { title: "12-Week Curriculum", url: "/curriculum", icon: BookOpen },
+        { title: "Cohort Presentations", url: "/presentations", icon: Presentation },
       ]},
       { label: "Account", items: [profileItem] },
     ];
@@ -122,7 +126,7 @@ export function AppSidebar() {
     program === "vanguard" ? "Vanguard Brotherhood"
     : program === "flow" ? "Flow Collective"
     : role === "admin" ? "Admin Console"
-    : "Awaiting assignment";
+    : BRAND_NAME;
   const ProgramIcon = program === "flow" ? Heart : Shield;
 
   const signOut = async () => {

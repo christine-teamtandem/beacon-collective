@@ -47,12 +47,11 @@ export function getResendApiKey(): string {
   return sanitizeEnv(process.env.RESEND_API_KEY);
 }
 
+import { BRAND_FROM_EMAIL } from "@/lib/brand";
+
 /** Sanitized Resend "from" envelope, with a safe branded default. */
 export function getResendFrom(): string {
-  return (
-    sanitizeEnv(process.env.RESEND_FROM_EMAIL) ||
-    "Freebleeders Mentorship Hub <noreply@mentorship.freebleeders.org>"
-  );
+  return sanitizeEnv(process.env.RESEND_FROM_EMAIL) || BRAND_FROM_EMAIL;
 }
 
 /** Public site URL, sanitized and without a trailing slash. */

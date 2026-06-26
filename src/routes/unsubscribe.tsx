@@ -2,6 +2,7 @@ import { createFileRoute, useSearch } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 type State = "loading" | "valid" | "already" | "invalid" | "success" | "error";
 
@@ -51,13 +52,13 @@ function UnsubscribePage() {
       <Card className="w-full max-w-md">
         <CardHeader>
           <CardTitle>Email preferences</CardTitle>
-          <CardDescription>freebleeders mentorship hub</CardDescription>
+          <CardDescription>{BRAND_NAME} — {BRAND_TAGLINE}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {state === "loading" && <p className="text-sm text-muted-foreground">Loading...</p>}
           {state === "valid" && (
             <>
-              <p className="text-sm">Click below to unsubscribe from freebleeders mentorship hub emails.</p>
+              <p className="text-sm">Click below to unsubscribe from {BRAND_NAME} emails.</p>
               <Button onClick={confirm} className="w-full">Confirm unsubscribe</Button>
             </>
           )}

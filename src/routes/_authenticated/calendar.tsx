@@ -9,12 +9,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Calendar as CalIcon, Video, Plus, Trash2, Link as LinkIcon, Unlink, AlertTriangle, ExternalLink, Copy, CheckCheck } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Calendar as CalIcon, Video, Plus, Trash2, Link as LinkIcon, Unlink, AlertTriangle, ExternalLink, Copy, CheckCheck, CheckCircle2 } from "lucide-react";
 import { format, isAfter, addMinutes, subMinutes } from "date-fns";
 import { toast } from "sonner";
 import { getZoomConnection, getZoomAuthUrl, getZoomSetupInfo, disconnectZoom, createZoomMeetingForSession } from "@/lib/zoom.functions";
+import { createScheduledSession, listSessionParticipants } from "@/lib/sessions.functions";
 
 export const Route = createFileRoute("/_authenticated/calendar")({
   component: CalendarPage,
@@ -114,6 +116,11 @@ function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: b
           <p className="font-semibold truncate">{s.title}</p>
           <Badge variant="outline" className="capitalize">{s.program}</Badge>
           {s.cohort && <Badge variant="secondary">{s.cohort}</Badge>}
+          {s.zoom_url && (
+            <Badge className="bg-emerald-600/15 text-emerald-700 dark:text-emerald-400 border-emerald-600/30">
+              <CheckCircle2 className="h-3 w-3 mr-1" /> Zoom Meeting Created
+            </Badge>
+          )}
         </div>
         <p className="text-xs text-muted-foreground mt-1">
           {format(start, "EEE, MMM d · h:mm a")} – {format(end, "h:mm a")}
@@ -144,25 +151,47 @@ function SessionRow({ s, canEdit, muted }: { s: any; canEdit: boolean; muted?: b
 
 function NewSessionDialog({ program, userId }: { program: "vanguard" | "flow"; userId: string }) {
   const qc = useQueryClient();
+  const createSessionFn = useServerFn(createScheduledSession);
+  const listParticipantsFn = useServerFn(listSessionParticipants);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ title: "", description: "", starts_at: "", ends_at: "", zoom_url: "", cohort: "" });
+  const [form, setForm] = useState({
+    title: "",
+    description: "",
+    starts_at: "",
+    ends_at: "",
+    cohort: "",
+    participant_id: "",
+  });
+
+  const { data: participantData } = useQuery({
+    queryKey: ["session-participants", program],
+    queryFn: () => (listParticipantsFn as any)({}),
+    enabled: open,
+  });
+  const participants = participantData?.participants ?? [];
 
   const create = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from("sessions").insert({
-        program, mentor_id: userId, created_by: userId,
-        title: form.title, description: form.description || null,
-        starts_at: new Date(form.starts_at).toISOString(),
-        ends_at: new Date(form.ends_at).toISOString(),
-        zoom_url: form.zoom_url || null, cohort: form.cohort || null,
+      return createSessionFn({
+        data: {
+          program,
+          title: form.title,
+          description: form.description || undefined,
+          starts_at: new Date(form.starts_at).toISOString(),
+          ends_at: new Date(form.ends_at).toISOString(),
+          cohort: form.cohort || undefined,
+          participant_id: form.participant_id || undefined,
+        },
       });
-      if (error) throw error;
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       qc.invalidateQueries({ queryKey: ["sessions"] });
-      toast.success("Session created");
+      const msg = result?.zoomCreated
+        ? `Session scheduled — Zoom meeting created${result.emailsSent ? ` and ${result.emailsSent} confirmation email(s) sent` : ""}.`
+        : "Session created.";
+      toast.success(msg);
       setOpen(false);
-      setForm({ title: "", description: "", starts_at: "", ends_at: "", zoom_url: "", cohort: "" });
+      setForm({ title: "", description: "", starts_at: "", ends_at: "", cohort: "", participant_id: "" });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -173,17 +202,43 @@ function NewSessionDialog({ program, userId }: { program: "vanguard" | "flow"; u
         <Button><Plus className="h-4 w-4 mr-1" /> New session</Button>
       </DialogTrigger>
       <DialogContent>
-        <DialogHeader><DialogTitle>Schedule a session</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Schedule a session</DialogTitle>
+          <DialogDescription>
+            {program === "vanguard"
+              ? "Creates a unique Zoom room, calendar links, and sends a confirmation email to your participant."
+              : "Creates a Zoom room and sends calendar confirmations to you and your participant."}
+          </DialogDescription>
+        </DialogHeader>
         <form className="space-y-3" onSubmit={(e) => { e.preventDefault(); create.mutate(); }}>
           <div><Label>Title</Label><Input required value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></div>
           <div className="grid grid-cols-2 gap-3">
             <div><Label>Starts</Label><Input type="datetime-local" required value={form.starts_at} onChange={(e) => setForm({ ...form, starts_at: e.target.value })} /></div>
             <div><Label>Ends</Label><Input type="datetime-local" required value={form.ends_at} onChange={(e) => setForm({ ...form, ends_at: e.target.value })} /></div>
           </div>
-          <div><Label>Zoom URL</Label><Input type="url" placeholder="https://zoom.us/j/…" value={form.zoom_url} onChange={(e) => setForm({ ...form, zoom_url: e.target.value })} /></div>
+          <div>
+            <Label>{program === "vanguard" ? "Participant" : "Participant (optional)"}</Label>
+            <Select
+              value={form.participant_id || undefined}
+              onValueChange={(v) => setForm({ ...form, participant_id: v })}
+              required={program === "vanguard"}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={participants.length ? "Select mentee…" : "No assigned mentees"} />
+              </SelectTrigger>
+              <SelectContent>
+                {participants.map((p: { id: string; full_name: string | null }) => (
+                  <SelectItem key={p.id} value={p.id}>{p.full_name || "Unnamed mentee"}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
           <div><Label>Cohort (optional)</Label><Input value={form.cohort} onChange={(e) => setForm({ ...form, cohort: e.target.value })} /></div>
           <div><Label>Notes</Label><Textarea rows={3} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-          <DialogFooter><Button type="submit" disabled={create.isPending}>{create.isPending ? "Creating…" : "Create"}</Button></DialogFooter>
+          <p className="text-xs text-muted-foreground">
+            Zoom link is generated automatically when you save. Your Zoom account must be connected with <code className="text-[11px]">meeting:write</code> scope.
+          </p>
+          <DialogFooter><Button type="submit" disabled={create.isPending}>{create.isPending ? "Scheduling…" : "Schedule session"}</Button></DialogFooter>
         </form>
       </DialogContent>
     </Dialog>

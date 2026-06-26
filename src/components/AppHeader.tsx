@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useUserContext } from "@/hooks/useSession";
 import { LogOut, Shield, Heart } from "lucide-react";
 import { DonateModal } from "@/components/DonateModal";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 export function AppHeader() {
   const navigate = useNavigate();
@@ -19,13 +20,16 @@ export function AppHeader() {
   return (
     <header className="sticky top-0 z-40 border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-gold">
-            <Shield className="h-4 w-4 text-primary-foreground" />
+        <Link to="/" className="flex flex-col gap-0 leading-tight">
+          <div className="flex items-center gap-2">
+            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gradient-gold">
+              <Shield className="h-4 w-4 text-primary-foreground" />
+            </div>
+            <span className="font-display text-lg font-bold tracking-tight">
+              {BRAND_NAME}
+            </span>
           </div>
-          <span className="font-display text-lg font-bold tracking-tight">
-            Vanguard <span className="text-gold">&</span> Flow
-          </span>
+          <span className="pl-10 text-[10px] text-muted-foreground hidden sm:block">{BRAND_TAGLINE}</span>
         </Link>
         <nav className="hidden md:flex items-center gap-6 text-sm">
           {user && (

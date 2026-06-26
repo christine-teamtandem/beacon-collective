@@ -31,7 +31,9 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "Freebleeders Mentorship Hub"
+import { BRAND_NAME } from '@/lib/brand'
+
+const SITE_NAME = BRAND_NAME
 const SENDER_DOMAIN = "notify.mentorship.freebleeders.org"
 const ROOT_DOMAIN = "mentorship.freebleeders.org"
 const FROM_DOMAIN = "mentorship.freebleeders.org"

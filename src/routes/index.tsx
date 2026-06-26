@@ -4,6 +4,7 @@ import { AppHeader } from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { DonateModal } from "@/components/DonateModal";
 import { PROGRAMS, VANGUARD_CURRICULUM, FLOW_CURRICULUM } from "@/lib/curriculum";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import {
   Shield, Sparkles, Users, Trophy, Calendar, BookOpen, Heart, ArrowRight,
   CheckCircle2, Link2, Target, HandHeart, Flame, Gift, ClipboardList, LineChart,
@@ -12,9 +13,9 @@ import {
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "freebleeders mentorship hub — Member Hub for Mentees, Mentors & Families" },
-      { name: "description", content: "The private hub for enrolled mentees, mentors, and families of the Vanguard Brotherhood and Flow Collective mentorship programs." },
-      { property: "og:title", content: "freebleeders mentorship hub — Member Hub" },
+      { title: `${BRAND_NAME} — Member Hub for Mentees, Mentors & Families` },
+      { name: "description", content: `${BRAND_TAGLINE} The private hub for enrolled mentees, mentors, and families.` },
+      { property: "og:title", content: `${BRAND_NAME} — Member Hub` },
       { property: "og:description", content: "Sign in to access your curriculum, weekly tracking, mentor workbook, and family updates." },
     ],
   }),
@@ -32,11 +33,12 @@ function Landing() {
       <section className="bg-gradient-hero">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 py-24 sm:py-32 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-gold/30 bg-gold/5 px-4 py-1.5 text-xs uppercase tracking-widest text-gold mb-6">
-            <Sparkles className="h-3 w-3" /> Member Hub · Mentees · Mentors · Families
+            <Sparkles className="h-3 w-3" /> {BRAND_NAME}
           </div>
           <h1 className="font-display text-5xl sm:text-7xl font-bold leading-tight">
-            Welcome to your<br /><span className="text-gold">Brotherhood & Collective</span> hub.
+            {BRAND_NAME}
           </h1>
+          <p className="mt-4 text-lg text-gold font-medium">{BRAND_TAGLINE}</p>
           <p className="mt-6 mx-auto max-w-2xl text-lg text-muted-foreground">
             The private home base for enrolled mentees, their mentors, and their families. Access your curriculum, weekly check-ins, tracking logs, and program updates — all in one place.
           </p>
@@ -144,7 +146,7 @@ function Landing() {
       </section>
 
       <footer className="border-t border-border py-8 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} freebleeders mentorship hub — Administered by Free Bleeders Inc.
+        © {new Date().getFullYear()} {BRAND_NAME} — {BRAND_TAGLINE} Administered by Free Bleeders Inc.
       </footer>
 
       <DonateModal open={donateOpen} onOpenChange={setDonateOpen} />

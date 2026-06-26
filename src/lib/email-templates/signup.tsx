@@ -1,6 +1,7 @@
 import * as React from 'react'
 import { Button, Link, Text } from '@react-email/components'
 import { BrandLayout, button, eyebrow, h1, link, notice, text } from './_layout'
+import { BRAND_TAGLINE } from '@/lib/brand'
 
 interface SignupEmailProps {
   siteName: string
@@ -18,6 +19,9 @@ export const SignupEmail = ({
   <BrandLayout preview={`Confirm your email for ${siteName}`}>
     <Text style={eyebrow}>Welcome</Text>
     <Text style={h1}>Confirm your email</Text>
+    <Text style={text}>
+      {BRAND_TAGLINE}
+    </Text>
     <Text style={text}>
       Thank you for joining{' '}
       <Link href={siteUrl} style={link}>

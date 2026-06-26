@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { PROGRAMS, getCurriculum } from "@/lib/curriculum";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 import { BookOpen, Users, ClipboardList, Trophy, ArrowRight, Calendar, Heart, Shield, Plus } from "lucide-react";
 import { AddChildDialog } from "@/components/AddChildDialog";
 
@@ -27,8 +28,11 @@ function Dashboard() {
         <p className="text-xs uppercase tracking-widest text-program font-semibold">{role} dashboard</p>
         <h1 className="font-display text-4xl font-bold mt-1">Welcome back, {fullName.split(" ")[0] || "friend"}.</h1>
         <p className="text-muted-foreground mt-1">
-          {program ? PROGRAMS[program].name : role === "mentee" ? "Waiting for program assignment" : "Mentorship Hub"}
+          {program ? PROGRAMS[program].name : role === "mentee" ? "Waiting for program assignment" : BRAND_NAME}
         </p>
+        {!program && role !== "mentee" && (
+          <p className="text-xs text-muted-foreground mt-1">{BRAND_TAGLINE}</p>
+        )}
       </div>
 
       {role === "mentee" && program && <MenteeDashboard userId={user.id} program={program} />}

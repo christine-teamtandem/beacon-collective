@@ -16,12 +16,13 @@
  *   3. Neither → return a clear, actionable error.
  */
 import { sanitizeEnv } from "@/lib/config.server";
+import { BRAND_FROM_EMAIL, BRAND_NAME } from "@/lib/brand";
 
 // Verified sender identity (must match the domain delegated to Lovable / Resend).
-export const SITE_NAME = "Freebleeders Mentorship Hub";
+export const SITE_NAME = BRAND_NAME;
 export const FROM_DOMAIN = "mentorship.freebleeders.org";
 export const SENDER_DOMAIN = "notify.mentorship.freebleeders.org";
-export const DEFAULT_FROM = `${SITE_NAME} <noreply@${FROM_DOMAIN}>`;
+export const DEFAULT_FROM = BRAND_FROM_EMAIL;
 
 export type EmailCredentialKind = "lovable" | "resend" | "none";
 

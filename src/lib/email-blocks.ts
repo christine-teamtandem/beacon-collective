@@ -1,10 +1,8 @@
 /**
  * Email block model + email-safe HTML renderer.
- *
- * The same renderer produces both the live preview in the builder and the
- * final HTML that gets saved to the library / sent through the connector,
- * so what you see is what recipients get.
  */
+
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 export type EmailBlock =
   | { id: string; type: "heading"; text: string }
@@ -115,8 +113,8 @@ ${rows}
           </table>
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #262626;font-family:${BRAND.sans};color:${BRAND.muted};font-size:12px;text-align:center;">
-          Freebleeders Mentorship Hub<br/>
-          <span style="color:#6b6760;">You are receiving this because you are part of our mentorship community.</span>
+          ${BRAND_NAME}<br/>
+          <span style="color:#6b6760;">${BRAND_TAGLINE}</span>
         </td></tr>
       </table>
     </td></tr>

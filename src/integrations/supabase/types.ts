@@ -423,6 +423,7 @@ export type Database = {
           ends_at: string
           id: string
           mentor_id: string | null
+          participant_id: string | null
           program: Database["public"]["Enums"]["program_type"]
           starts_at: string
           title: string
@@ -440,6 +441,7 @@ export type Database = {
           ends_at: string
           id?: string
           mentor_id?: string | null
+          participant_id?: string | null
           program: Database["public"]["Enums"]["program_type"]
           starts_at: string
           title: string
@@ -457,6 +459,7 @@ export type Database = {
           ends_at?: string
           id?: string
           mentor_id?: string | null
+          participant_id?: string | null
           program?: Database["public"]["Enums"]["program_type"]
           starts_at?: string
           title?: string

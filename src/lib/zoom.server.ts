@@ -7,6 +7,9 @@
 const ZOOM_TOKEN = "https://zoom.us/oauth/token";
 const ZOOM_API = "https://api.zoom.us/v2";
 
+/** OAuth scope required to create meetings via POST /users/me/meetings */
+export const ZOOM_MEETING_WRITE_SCOPE = "meeting:write";
+
 type ZoomConnection = {
   user_id: string;
   access_token: string;
@@ -37,6 +40,10 @@ export async function getValidZoomConnection(userId: string): Promise<ZoomConnec
 
   const { getZoomCredentials } = await import("@/lib/config.server");
   const { clientId, clientSecret } = getZoomCredentials();
+  if (!clientId || !clientSecret) {
+    console.error("Zoom token refresh skipped — ZOOM_CLIENT_ID or ZOOM_CLIENT_SECRET not set");
+    return null;
+  }
   const basic = Buffer.from(`${clientId}:${clientSecret}`).toString("base64");
   const res = await fetch(ZOOM_TOKEN, {
     method: "POST",
@@ -62,6 +69,12 @@ export async function getValidZoomConnection(userId: string): Promise<ZoomConnec
   };
   await supabaseAdmin.from("zoom_connections").update(updated).eq("user_id", userId);
   return { ...conn, ...updated } as ZoomConnection;
+}
+
+/** Returns true when the stored OAuth scope includes meeting:write. */
+export function hasMeetingWriteScope(scope: string | null): boolean {
+  if (!scope) return false;
+  return scope.split(/\s+/).includes(ZOOM_MEETING_WRITE_SCOPE);
 }
 
 export interface EnsuredZoomMeeting {
@@ -101,6 +114,13 @@ export async function ensureZoomMeetingForSession(session: {
 
   const conn = await getValidZoomConnection(session.mentor_id);
   if (!conn) return null;
+  if (!hasMeetingWriteScope(conn.scope)) {
+    console.error(
+      "Zoom connection missing meeting:write scope — reconnect Zoom on the Calendar page.",
+      conn.scope,
+    );
+    return null;
+  }
 
   const duration = Math.max(
     15,

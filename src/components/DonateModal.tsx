@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 
 declare global {
   namespace JSX {
@@ -33,7 +34,7 @@ export function DonateModal({ open, onOpenChange }: { open: boolean; onOpenChang
         <DialogHeader>
           <DialogTitle className="font-display text-2xl">Support the mission</DialogTitle>
           <DialogDescription>
-            Your gift sponsors mentorship, retreats, and rewards for young people in the freebleeders mentorship hub programs.
+            Your gift sponsors mentorship, retreats, and rewards for young people in {BRAND_NAME}. {BRAND_TAGLINE}
           </DialogDescription>
         </DialogHeader>
         <div ref={mountRef} className="mt-4 min-h-[400px]" />
