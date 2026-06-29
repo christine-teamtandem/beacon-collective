@@ -9,7 +9,11 @@ import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
 // The Resend pipeline is already wired through sendLovableEmail in the
 // queue processor — no separate RESEND_API_KEY is needed in app code.
 //
+<<<<<<< HEAD
 // Sender display name: Free Bleeders Mentorship (see src/lib/brand.ts).
+=======
+// Sender display name updated to "Free Bleeders Mentorship" per brand spec.
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
 // Actual sending domain remains mentorship.freebleeders.org (Resend-verified).
 // To route through freebleeders@gmail.com, verify that address in Resend and
 // update the `from` field in sendComposedEmail below.
@@ -27,7 +31,11 @@ export const generateEmailDraft = createServerFn({ method: "POST" })
     const apiKey = process.env.LOVABLE_API_KEY;
     if (!apiKey) throw new Error("AI service unavailable — LOVABLE_API_KEY not set.");
 
+<<<<<<< HEAD
     const systemPrompt = `You are an expert email copywriter for ${BRAND_NAME}, a premium mentorship platform serving young men and women aged 12–18. Tagline: "${BRAND_TAGLINE}" Your brand voice is warm, purposeful, and elevated — never corporate or generic.
+=======
+    const systemPrompt = `You are an expert email copywriter for Free Bleeders Mentorship, a premium mentorship platform serving young men and women aged 12–18. Your brand voice is warm, purposeful, and elevated — never corporate or generic.
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
 
 When given a reference email, template, or content notes, you MUST:
 1. Match the exact tone, structure, and intent of the reference material.
@@ -35,7 +43,11 @@ When given a reference email, template, or content notes, you MUST:
 3. Use clear paragraph breaks (double newlines between paragraphs).
 4. Do NOT include salutations like "Hi [Name]" or sign-offs like "Regards" — those are handled by the system.
 5. Do NOT include placeholder brackets like [Name] or [Date].
+<<<<<<< HEAD
 6. Keep the tone genuine, premium, and aligned with the Free Bleeders Mentorship brand identity.
+=======
+6. Keep the tone genuine, premium, and aligned with the Free Bleeders brand identity.
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
 7. Return only the email body text — no commentary, no markdown formatting, no headings.`;
 
     const userPrompt = [

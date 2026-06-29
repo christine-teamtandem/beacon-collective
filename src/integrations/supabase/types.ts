@@ -14,45 +14,6 @@ export type Database = {
   }
   public: {
     Tables: {
-      email_templates: {
-        Row: {
-          id: string
-          name: string
-          description: string | null
-          subject: string | null
-          html: string
-          blocks: Json | null
-          thumbnail_url: string | null
-          created_by: string
-          created_at: string
-          updated_at: string
-        }
-        Insert: {
-          id?: string
-          name: string
-          description?: string | null
-          subject?: string | null
-          html?: string
-          blocks?: Json | null
-          thumbnail_url?: string | null
-          created_by: string
-          created_at?: string
-          updated_at?: string
-        }
-        Update: {
-          id?: string
-          name?: string
-          description?: string | null
-          subject?: string | null
-          html?: string
-          blocks?: Json | null
-          thumbnail_url?: string | null
-          created_by?: string
-          created_at?: string
-          updated_at?: string
-        }
-        Relationships: []
-      }
       announcements: {
         Row: {
           author_id: string
@@ -233,6 +194,45 @@ export type Database = {
           retry_after_until?: string | null
           send_delay_ms?: number
           transactional_email_ttl_minutes?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      email_templates: {
+        Row: {
+          blocks: Json | null
+          created_at: string
+          created_by: string | null
+          description: string | null
+          html: string
+          id: string
+          name: string
+          subject: string | null
+          thumbnail_url: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocks?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          html?: string
+          id?: string
+          name: string
+          subject?: string | null
+          thumbnail_url?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocks?: Json | null
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          html?: string
+          id?: string
+          name?: string
+          subject?: string | null
+          thumbnail_url?: string | null
           updated_at?: string
         }
         Relationships: []

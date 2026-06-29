@@ -27,7 +27,11 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
   return (
     <Html lang="en" dir="ltr">
       <Head />
+<<<<<<< HEAD
       <Preview>{subject || `A message from ${BRAND_NAME}`}</Preview>
+=======
+      <Preview>{subject || 'A message from Free Bleeders Mentorship'}</Preview>
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
       <Body style={main}>
         <Container style={outer}>
 
@@ -35,7 +39,11 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
           <Section style={headerBar}>
             <Text style={headerMarkText}>
               <span style={headerMarkAccent}>FREE BLEEDERS</span>
+<<<<<<< HEAD
               &nbsp;&nbsp;|&nbsp;&nbsp;MENTORSHIP
+=======
+              &nbsp;&nbsp;|&nbsp;&nbsp;MENTORSHIP HUB
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
             </Text>
           </Section>
 
@@ -70,15 +78,23 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
               {senderRole ? (
                 <span style={attributionRole}>{` (${senderRole})`}</span>
               ) : null}
+<<<<<<< HEAD
               {' '}through {BRAND_NAME}.
+=======
+              {' '}through the Free Bleeders Mentorship.
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
             </Text>
 
           </Container>
 
           {/* ── Footer ───────────────────────────────────────── */}
           <Section style={footerSection}>
+<<<<<<< HEAD
             <Text style={footerBrand}>{BRAND_NAME}</Text>
             <Text style={footerSub}>{BRAND_TAGLINE}</Text>
+=======
+            <Text style={footerBrand}>Free Bleeders Mentorship</Text>
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
             <Text style={footerLinks}>
               <Link href="mailto:support@mentorship.freebleeders.org" style={footerLink}>
                 Contact Support
@@ -93,7 +109,11 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
               </Link>
             </Text>
             <Text style={footerSub}>
+<<<<<<< HEAD
               You received this because you are a member of {BRAND_NAME}.
+=======
+              You received this because you are a member of the Free Bleeders Mentorship.
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
             </Text>
           </Section>
 
@@ -106,13 +126,22 @@ const ComposedMessage = ({ senderName, senderRole, subject, body }: Props) => {
 export const template = {
   component: ComposedMessage,
   subject: (data: Record<string, any>) =>
+<<<<<<< HEAD
     data.subject || `Message from ${BRAND_NAME}`,
+=======
+    data.subject || 'Message from Free Bleeders Mentorship',
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
   displayName: 'Hub composed message',
   previewData: {
     senderName: 'Tracy Hamler',
     senderRole: 'admin',
+<<<<<<< HEAD
     subject: `Welcome to ${BRAND_NAME}`,
     body: `Hi,\n\nThis is a sample message sent from the hub.\n\n${BRAND_TAGLINE}\n\nWith intention,\nThe Free Bleeders Team`,
+=======
+    subject: 'Welcome to our mentorship hub',
+    body: 'Hi,\n\nThis is a sample message sent from the hub.\n\nWe look forward to walking this journey with you.\n\nWith intention,\nThe Free Bleeders Team',
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
   },
 } satisfies TemplateEntry
 

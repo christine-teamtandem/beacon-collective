@@ -36,7 +36,11 @@ const WeeklyZoomCheckIn = ({
       <Preview>{`Your weekly check-in${whenLabel ? ` — ${whenLabel}` : ''}`}</Preview>
       <Body style={main}>
         <Container style={container}>
+<<<<<<< HEAD
           <Text style={brand}>{BRAND_EMAIL_MARK}</Text>
+=======
+          <Text style={brand}>FREE BLEEDERS · MENTORSHIP</Text>
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
           <Heading style={h1}>{sessionTitle}</Heading>
           {programLabel && <Text style={pill}>{programLabel}</Text>}
 

@@ -51,7 +51,14 @@ import { BRAND_FROM_EMAIL } from "@/lib/brand";
 
 /** Sanitized Resend "from" envelope, with a safe branded default. */
 export function getResendFrom(): string {
+<<<<<<< HEAD
   return sanitizeEnv(process.env.RESEND_FROM_EMAIL) || BRAND_FROM_EMAIL;
+=======
+  return (
+    sanitizeEnv(process.env.RESEND_FROM_EMAIL) ||
+    "Free Bleeders Mentorship <noreply@mentorship.freebleeders.org>"
+  );
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
 }
 
 /** Public site URL, sanitized and without a trailing slash. */

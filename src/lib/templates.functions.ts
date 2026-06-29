@@ -47,12 +47,20 @@ function extractHtml(raw: string): string {
   return s.trim();
 }
 
+<<<<<<< HEAD
 const BRAND_SYSTEM = `You are an expert HTML email designer for "${BRAND_NAME}", a premium youth mentorship brand. Tagline: "${BRAND_TAGLINE}"
+=======
+const BRAND_SYSTEM = `You are an expert HTML email designer for "Free Bleeders Mentorship", a premium youth mentorship brand.
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
 Produce production-ready, email-client-safe HTML:
 - Use table-based layout with inline CSS only (no <style> blocks, no external CSS, no <script>).
 - Mobile-responsive with max-width 600px centered container.
 - Luxury dark brand palette: background #0a0a0a, card #141414, gold accent #C9A84C, crimson #8B0000, off-white text #E8E4DD, serif (Georgia) headings.
+<<<<<<< HEAD
 - Include a header, body content area, a clear gold CTA button, and a footer with "${BRAND_NAME}" and the tagline.
+=======
+- Include a header, body content area, a clear gold CTA button, and a footer with "Free Bleeders Mentorship".
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
 - Use {{first_name}} as a merge placeholder where a greeting belongs.
 Return ONLY the HTML document — no markdown, no commentary.`;
 
@@ -195,7 +203,11 @@ export const rewriteText = createServerFn({ method: "POST" })
         {
           role: "system",
           content:
+<<<<<<< HEAD
             `You are an expert email copywriter for ${BRAND_NAME} (warm, purposeful, elevated). Tagline: "${BRAND_TAGLINE}" Rewrite the given text per the instruction. Keep {{first_name}} placeholders intact. Return ONLY the rewritten plain text — no quotes, no markdown, no commentary.`,
+=======
+            "You are an expert email copywriter for Free Bleeders Mentorship (warm, purposeful, elevated). Rewrite the given text per the instruction. Keep {{first_name}} placeholders intact. Return ONLY the rewritten plain text — no quotes, no markdown, no commentary.",
+>>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
         },
         { role: "user", content: `Text:\n${data.text}\n\nInstruction: ${data.instruction}` },
       ],
