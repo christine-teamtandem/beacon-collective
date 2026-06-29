@@ -12,10 +12,12 @@ import {
   LayoutDashboard, BookOpen, ClipboardList, FolderOpen, FileText, BarChart3,
   Shield, Heart, LogOut, Users, Calendar, Megaphone, MessageCircle, ShieldCheck,
   Mail, UserCircle2, ChevronRight, Send, Clock, History, CalendarClock, LayoutTemplate,
-  Presentation,
+  Presentation, Compass,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { BRAND_NAME } from "@/lib/brand";
+import { tourTargetForUrl } from "@/lib/hub-tour";
+import { useHubTour } from "@/contexts/HubTourContext";
 import { useState } from "react";
 
 type Item = { title: string; url: string; icon: React.ComponentType<{ className?: string }> };
@@ -110,6 +112,7 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
 
 export function AppSidebar() {
   const { role, program, fullName, user } = useUserContext();
+  const { startTour } = useHubTour();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isMobile, setOpenMobile } = useSidebar();
@@ -187,6 +190,7 @@ export function AppSidebar() {
                         <Link
                           to={item.url}
                           onClick={closeMobile}
+                          data-hub-tour={tourTargetForUrl(item.url)}
                           className="flex items-center gap-2"
                         >
                           <item.icon className="h-4 w-4" />
@@ -204,6 +208,7 @@ export function AppSidebar() {
                       <CollapsibleTrigger asChild>
                         <SidebarMenuButton
                           isActive={emailActive && !emailOpen}
+                          data-hub-tour="email"
                           className="flex w-full items-center justify-between"
                         >
                           <span className="flex items-center gap-2">
@@ -253,6 +258,15 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={startTour}
+          className="mx-2 mb-1 w-[calc(100%-1rem)] justify-start gap-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
+        >
+          <Compass className="h-3.5 w-3.5" />
+          Replay hub tour
+        </Button>
         <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0">
           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold">
             {(fullName || user?.email || "?").slice(0, 1).toUpperCase()}

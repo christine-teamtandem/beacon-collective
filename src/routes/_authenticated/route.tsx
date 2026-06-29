@@ -8,6 +8,8 @@ import { useState } from "react";
 import { DonateModal } from "@/components/DonateModal";
 import { Button } from "@/components/ui/button";
 import { ViewAsBar } from "@/components/ViewAsBar";
+import { HubTourProvider } from "@/contexts/HubTourContext";
+import { Heart, Shield } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated")({
   ssr: false,
@@ -38,6 +40,7 @@ function AuthenticatedLayout() {
   return (
     <div className={themeClass}>
       <SidebarProvider>
+        <HubTourProvider>
         <div className="flex min-h-screen w-full bg-background">
           <AppSidebar />
           <SidebarInset className="flex-1">
@@ -60,6 +63,7 @@ function AuthenticatedLayout() {
           </SidebarInset>
         </div>
         <DonateModal open={donateOpen} onOpenChange={setDonateOpen} />
+        </HubTourProvider>
       </SidebarProvider>
     </div>
   );
