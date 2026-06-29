@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouter } from "@tanstack/react-router";
 import { useUserContext } from "@/hooks/useSession";
 import { getHubTourSteps, tourStorageKey, type HubTourStep } from "@/lib/hub-tour";
 import { HubOnboardingTour } from "@/components/HubOnboardingTour";
@@ -24,6 +24,7 @@ const HubTourContext = createContext<HubTourContextValue | null>(null);
 export function HubTourProvider({ children }: { children: ReactNode }) {
   const { user, role, program, loading } = useUserContext();
   const navigate = useNavigate();
+  const router = useRouter();
   const [active, setActive] = useState(false);
   const [manual, setManual] = useState(false);
 
@@ -61,10 +62,14 @@ export function HubTourProvider({ children }: { children: ReactNode }) {
   const handleCta = useCallback(
     (href: string) => {
       dismissTour();
-      // Dynamic routes (e.g. /curriculum/1) — cast for TanStack typed router
-      navigate({ to: href as "/dashboard" });
+      const weekMatch = /^\/curriculum\/(\d+)$/.exec(href);
+      if (weekMatch) {
+        navigate({ to: "/curriculum/$week", params: { week: weekMatch[1] } });
+        return;
+      }
+      router.history.push(href);
     },
-    [dismissTour, navigate],
+    [dismissTour, navigate, router],
   );
 
   return (
