@@ -18,8 +18,10 @@ import { toast } from "sonner";
 import {
   UserPlus, Users, Shield, Heart, Trash2, Search, ShieldCheck, GraduationCap, UserCog, Baby,
   MoreVertical, KeyRound, Unlock, Mail, Activity, RefreshCw, CheckCircle2, XCircle, Eye,
-  AlertTriangle, HelpCircle, Send, Zap, Database, Bot, Clock,
+  AlertTriangle, HelpCircle, Send, Zap, Database, Bot, Clock, Compass, RotateCcw,
 } from "lucide-react";
+import { useHubTour } from "@/contexts/HubTourContext";
+import type { AppRole, Program } from "@/hooks/useSession";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   component: AdminPortal,
@@ -129,7 +131,71 @@ function Overview() {
           </Card>
         ))}
       </div>
+      <OnboardingPreview />
     </div>
+  );
+}
+
+function OnboardingPreview() {
+  const { replayTour, previewTourAs, resetTourCompletion } = useHubTour();
+  const { viewAs } = useUserContext();
+
+  const previews: { role: AppRole; program: Program | null; label: string }[] = [
+    { role: "admin", program: null, label: "Admin" },
+    { role: "mentor", program: "vanguard", label: "Mentor · Vanguard" },
+    { role: "mentor", program: "flow", label: "Mentor · Flow" },
+    { role: "mentee", program: "vanguard", label: "Mentee · Vanguard" },
+    { role: "mentee", program: "flow", label: "Mentee · Flow" },
+    { role: "parent", program: null, label: "Parent" },
+  ];
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2">
+          <Compass className="h-5 w-5 text-gold" />
+          Onboarding tour preview
+        </CardTitle>
+        <CardDescription>
+          Replay the first-time hub walkthrough to review copy, spotlight targets, and step flow.
+          Role previews switch the sidebar so highlights match what each member sees.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap gap-2">
+          <Button onClick={replayTour}>
+            <RotateCcw className="mr-1.5 h-4 w-4" />
+            Replay admin tour
+          </Button>
+          <Button variant="outline" onClick={resetTourCompletion}>
+            Reset auto-start flag
+          </Button>
+        </div>
+        <div>
+          <p className="mb-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            Preview as role
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {previews.map((p) => (
+              <Button
+                key={`${p.role}-${p.program ?? "none"}`}
+                size="sm"
+                variant="outline"
+                onClick={() => previewTourAs(p.role, p.program)}
+              >
+                {p.label}
+              </Button>
+            ))}
+          </div>
+        </div>
+        {viewAs && (
+          <p className="text-xs text-muted-foreground">
+            Currently previewing as <span className="font-semibold capitalize">{viewAs.role}</span>
+            {viewAs.program ? <> · {viewAs.program}</> : null}. Exit preview from the banner above when done.
+          </p>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

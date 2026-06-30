@@ -60,6 +60,14 @@ export async function sendBrandedEmail(input: SendBrandedEmailInput): Promise<Se
   const from = input.from || DEFAULT_FROM;
 
   if (kind === "lovable") {
+    if (!input.unsubscribeToken) {
+      return {
+        ok: false,
+        transport: "lovable",
+        error:
+          "Transactional emails must include an unsubscribe_token. Ensure the sender creates one before calling sendBrandedEmail.",
+      };
+    }
     try {
       const { sendLovableEmail } = await import("@lovable.dev/email-js");
       await sendLovableEmail(

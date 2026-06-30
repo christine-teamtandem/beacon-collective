@@ -359,6 +359,7 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
     }
 
     const { sendBrandedEmail, DEFAULT_FROM } = await import("@/lib/email-sender.server");
+    const { getOrCreateUnsubscribeToken } = await import("@/lib/email-unsubscribe.server");
     const { getResendFrom } = await import("@/lib/config.server");
     const fromAddress = getResendFrom() || DEFAULT_FROM;
 
@@ -374,7 +375,19 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
         : baseHtml;
       const text = useTemplate ? stripHtml(html) : baseText;
 
-      // Format-aware send: Lovable connector (lovc_ keys) or direct Resend (re_ keys).
+      const tokenResult = await getOrCreateUnsubscribeToken(supabaseAdmin, r.email);
+      if (!tokenResult.ok) {
+        await supabaseAdmin.from("email_send_log").insert({
+          message_id: messageId,
+          template_name: "composed-message",
+          recipient_email: r.email,
+          status: "failed",
+          error_message: tokenResult.error.slice(0, 500),
+        });
+        results.push({ ...r, ok: false, reason: tokenResult.error });
+        continue;
+      }
+
       const sendRes = await sendBrandedEmail({
         to: r.email,
         from: fromAddress,
@@ -383,6 +396,7 @@ export const sendComposedEmail = createServerFn({ method: "POST" })
         text,
         messageId,
         label: useTemplate ? "composed-template" : "composed-message",
+        unsubscribeToken: tokenResult.token,
       });
 
       await supabaseAdmin.from("email_send_log").insert({

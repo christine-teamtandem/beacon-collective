@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { useNavigate, useRouter } from "@tanstack/react-router";
-import { useUserContext } from "@/hooks/useSession";
+import { setViewAs, useUserContext, type AppRole, type Program } from "@/hooks/useSession";
 import { getHubTourSteps, tourStorageKey, type HubTourStep } from "@/lib/hub-tour";
 import { HubOnboardingTour } from "@/components/HubOnboardingTour";
 
@@ -16,17 +16,21 @@ type HubTourContextValue = {
   active: boolean;
   steps: HubTourStep[];
   startTour: () => void;
+  replayTour: () => void;
+  previewTourAs: (role: AppRole, program?: Program | null) => void;
+  resetTourCompletion: () => void;
   dismissTour: () => void;
 };
 
 const HubTourContext = createContext<HubTourContextValue | null>(null);
 
 export function HubTourProvider({ children }: { children: ReactNode }) {
-  const { user, role, program, loading } = useUserContext();
+  const { user, role, program, realRole, loading } = useUserContext();
   const navigate = useNavigate();
   const router = useRouter();
   const [active, setActive] = useState(false);
   const [manual, setManual] = useState(false);
+  const [tourSession, setTourSession] = useState(0);
 
   const steps = useMemo(() => getHubTourSteps(role, program), [role, program]);
 
@@ -41,10 +45,43 @@ export function HubTourProvider({ children }: { children: ReactNode }) {
     }
   }, [user?.id]);
 
-  const startTour = useCallback(() => {
+  const launchTour = useCallback(() => {
+    setTourSession((n) => n + 1);
     setManual(true);
     setActive(true);
   }, []);
+
+  const startTour = launchTour;
+  const replayTour = launchTour;
+
+  const previewTourAs = useCallback(
+    (previewRole: AppRole, previewProgram: Program | null = "vanguard") => {
+      if (realRole !== "admin") return;
+
+      if (previewRole === "admin") {
+        setViewAs(null);
+      } else {
+        setViewAs({ role: previewRole, program: previewProgram });
+      }
+
+      window.setTimeout(() => {
+        setTourSession((n) => n + 1);
+        setManual(true);
+        setActive(true);
+      }, 300);
+    },
+    [realRole],
+  );
+
+  const resetTourCompletion = useCallback(() => {
+    if (realRole !== "admin" || !user?.id) return;
+    try {
+      localStorage.removeItem(tourStorageKey(user.id));
+      setManual(false);
+    } catch {
+      /* ignore */
+    }
+  }, [realRole, user?.id]);
 
   useEffect(() => {
     if (loading || !user?.id || manual) return;
@@ -73,10 +110,21 @@ export function HubTourProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <HubTourContext.Provider value={{ active, steps, startTour, dismissTour }}>
+    <HubTourContext.Provider
+      value={{
+        active,
+        steps,
+        startTour,
+        replayTour,
+        previewTourAs,
+        resetTourCompletion,
+        dismissTour,
+      }}
+    >
       {children}
       {active && steps.length > 0 && (
         <HubOnboardingTour
+          key={tourSession}
           steps={steps}
           onClose={dismissTour}
           onCta={handleCta}

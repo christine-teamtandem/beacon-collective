@@ -111,8 +111,8 @@ function itemsFor(role: AppRole | null, _program: Program | null): { label: stri
 
 
 export function AppSidebar() {
-  const { role, program, fullName, user } = useUserContext();
-  const { startTour } = useHubTour();
+  const { role, program, fullName, user, realRole } = useUserContext();
+  const { replayTour } = useHubTour();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { isMobile, setOpenMobile } = useSidebar();
@@ -258,15 +258,17 @@ export function AppSidebar() {
       </SidebarContent>
 
       <SidebarFooter className="border-t border-sidebar-border">
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={startTour}
-          className="mx-2 mb-1 w-[calc(100%-1rem)] justify-start gap-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
-        >
-          <Compass className="h-3.5 w-3.5" />
-          Replay hub tour
-        </Button>
+        {realRole === "admin" && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={replayTour}
+            className="mx-2 mb-1 w-[calc(100%-1rem)] justify-start gap-2 text-xs text-muted-foreground group-data-[collapsible=icon]:hidden"
+          >
+            <Compass className="h-3.5 w-3.5" />
+            Replay hub tour
+          </Button>
+        )}
         <div className="flex items-center gap-2 px-2 py-2 group-data-[collapsible=icon]:flex-col group-data-[collapsible=icon]:px-0">
           <div className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-muted text-xs font-semibold">
             {(fullName || user?.email || "?").slice(0, 1).toUpperCase()}

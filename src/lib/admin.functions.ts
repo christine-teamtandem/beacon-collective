@@ -138,6 +138,10 @@ async function sendAdminAuthEmail(
   let status: "sent" | "failed" = "sent";
   let errorMessage: string | null = null;
   try {
+    const { getOrCreateUnsubscribeToken } = await import("@/lib/email-unsubscribe.server");
+    const tokenResult = await getOrCreateUnsubscribeToken(supabaseAdmin, email);
+    if (!tokenResult.ok) throw new Error(tokenResult.error);
+
     const { sendBrandedEmail } = await import("@/lib/email-sender.server");
     const { getResendFrom } = await import("@/lib/config.server");
     const res = await sendBrandedEmail({
@@ -148,6 +152,7 @@ async function sendAdminAuthEmail(
       messageId,
       from: getResendFrom(),
       label: type,
+      unsubscribeToken: tokenResult.token,
     });
     if (!res.ok) throw new Error(res.error ?? "Email send failed");
   } catch (e) {
@@ -225,8 +230,22 @@ async function sendViaConnector(
   text: string,
   messageId: string,
 ) {
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  const { getOrCreateUnsubscribeToken } = await import("@/lib/email-unsubscribe.server");
   const { sendBrandedEmail } = await import("@/lib/email-sender.server");
-  const res = await sendBrandedEmail({ to, subject, html, text, messageId, label: "test-email" });
+
+  const tokenResult = await getOrCreateUnsubscribeToken(supabaseAdmin, to);
+  if (!tokenResult.ok) throw new Error(tokenResult.error);
+
+  const res = await sendBrandedEmail({
+    to,
+    subject,
+    html,
+    text,
+    messageId,
+    label: "test-email",
+    unsubscribeToken: tokenResult.token,
+  });
   if (!res.ok) throw new Error(res.error ?? "Email send failed");
   return res;
 }
