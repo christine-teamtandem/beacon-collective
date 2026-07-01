@@ -273,12 +273,7 @@ export const sendTestEmail = createServerFn({ method: "POST" })
     let status: "sent" | "failed" = "sent";
     let errorMessage: string | null = null;
     try {
-<<<<<<< HEAD
-      await sendViaConnector(to, `[Test] ${BRAND_NAME} — Email Pipeline`, html, text, messageId);
-=======
-      await sendViaConnector(to, "[Test] Free Bleeders Mentorship — Email Pipeline", html, text, messageId);
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
-    } catch (e) {
+      await sendViaConnector(to, `[Test] ${BRAND_NAME} — Email Pipeline`, html, text, messageId);    } catch (e) {
       status = "failed";
       errorMessage = e instanceof Error ? e.message : String(e);
     }

@@ -7,12 +7,7 @@ import { TEMPLATES } from '@/lib/email-templates/registry'
 import { BRAND_NAME } from '@/lib/brand'
 
 // Configuration baked in at scaffold time
-<<<<<<< HEAD
-const SITE_NAME = BRAND_NAME
-=======
-const SITE_NAME = "Free Bleeders Mentorship"
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
-// SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
+const SITE_NAME = BRAND_NAME// SENDER_DOMAIN is the verified sender subdomain FQDN (e.g., "notify.example.com").
 // It MUST match the subdomain delegated to Lovable's nameservers. NEVER use the root domain.
 const SENDER_DOMAIN = "notify.mentorship.freebleeders.org"
 // FROM_DOMAIN is the domain shown in the From: header (e.g., "example.com").

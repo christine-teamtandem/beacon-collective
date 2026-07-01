@@ -5,14 +5,9 @@ import { createClient } from '@supabase/supabase-js'
 import { TEMPLATES } from '@/lib/email-templates/registry'
 import { buildCalendarLinks } from '@/lib/calendar-links'
 
-<<<<<<< HEAD
 import { BRAND_NAME } from '@/lib/brand'
 
-const SITE_NAME = BRAND_NAME
-=======
-const SITE_NAME = 'Free Bleeders Mentorship'
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
-const SENDER_DOMAIN = 'notify.mentorship.freebleeders.org'
+const SITE_NAME = BRAND_NAMEconst SENDER_DOMAIN = 'notify.mentorship.freebleeders.org'
 const FROM_DOMAIN = 'mentorship.freebleeders.org'
 const DISPLAY_TIMEZONE = 'Asia/Manila'
 const TIMEZONE_LABEL = 'Asia/Manila (PHT)'

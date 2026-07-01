@@ -2,19 +2,36 @@
  * Email block model + email-safe HTML renderer.
  */
 
-import { BRAND_NAME, BRAND_TAGLINE } from "@/lib/brand";
-
 export type EmailBlock =
   | { id: string; type: "heading"; text: string }
   | { id: string; type: "text"; text: string }
   | { id: string; type: "image"; src: string; alt: string; href?: string }
   | { id: string; type: "button"; text: string; href: string }
   | { id: string; type: "divider" }
-  | { id: string; type: "spacer"; size: number };
+  | { id: string; type: "spacer"; size: number }
+  | { id: string; type: "columns2"; left: string; right: string }
+  | { id: string; type: "columns3"; col1: string; col2: string; col3: string };
 
 export type BlockType = EmailBlock["type"];
 
-// ── Brand palette ───────────────────────────────────────────────────────────
+export type EmailHeader = {
+  headline: string;
+  subheadline: string;
+  intro: string;
+  heroImageUrl: string;
+  heroImageAlt: string;
+  heroLink: string;
+};
+
+export const DEFAULT_EMAIL_HEADER: EmailHeader = {
+  headline: "",
+  subheadline: "",
+  intro: "",
+  heroImageUrl: "",
+  heroImageAlt: "",
+  heroLink: "",
+};
+
 export const BRAND = {
   bg: "#0a0a0a",
   card: "#141414",
@@ -50,6 +67,21 @@ export function makeBlock(type: BlockType): EmailBlock {
       return { id: newBlockId(), type };
     case "spacer":
       return { id: newBlockId(), type, size: 24 };
+    case "columns2":
+      return {
+        id: newBlockId(),
+        type,
+        left: "Left column content",
+        right: "Right column content",
+      };
+    case "columns3":
+      return {
+        id: newBlockId(),
+        type,
+        col1: "Column one",
+        col2: "Column two",
+        col3: "Column three",
+      };
   }
 }
 
@@ -60,6 +92,8 @@ export const BLOCK_LABELS: Record<BlockType, string> = {
   button: "Button",
   divider: "Divider",
   spacer: "Spacer",
+  columns2: "Two columns",
+  columns3: "Three columns",
 };
 
 function esc(s: string): string {
@@ -70,9 +104,44 @@ function esc(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-// Allow basic line breaks in text blocks.
 function richText(s: string): string {
   return esc(s).replace(/\n/g, "<br/>");
+}
+
+function renderHeroImage(header: EmailHeader): string {
+  if (!header.heroImageUrl) return "";
+  const img = `<img src="${esc(header.heroImageUrl)}" alt="${esc(header.heroImageAlt || "Hero")}" width="100%" style="display:block;width:100%;max-width:520px;height:auto;border-radius:8px;" />`;
+  const inner = header.heroLink
+    ? `<a href="${esc(header.heroLink)}" target="_blank">${img}</a>`
+    : img;
+  return `<tr><td style="padding:12px 0 8px;text-align:center;">${inner}</td></tr>`;
+}
+
+function renderHeaderRows(header: EmailHeader): string {
+  const rows: string[] = [];
+  if (header.headline.trim()) {
+    rows.push(
+      `<tr><td style="padding:4px 0 8px;font-family:${BRAND.serif};color:${BRAND.text};font-size:28px;line-height:1.2;font-weight:700;">${richText(header.headline)}</td></tr>`,
+    );
+  }
+  if (header.subheadline.trim()) {
+    rows.push(
+      `<tr><td style="padding:0 0 8px;font-family:${BRAND.serif};color:${BRAND.muted};font-size:16px;line-height:1.4;font-style:italic;">${richText(header.subheadline)}</td></tr>`,
+    );
+  }
+  if (header.intro.trim()) {
+    rows.push(
+      `<tr><td style="padding:0 0 12px;font-family:${BRAND.sans};color:${BRAND.text};font-size:15px;line-height:1.65;">${richText(header.intro)}</td></tr>`,
+    );
+  }
+  const hero = renderHeroImage(header);
+  if (hero) rows.push(hero);
+  if (rows.length > 0) {
+    rows.push(
+      `<tr><td style="padding:8px 0 4px;"><div style="height:1px;background:#262626;width:100%;"></div></td></tr>`,
+    );
+  }
+  return rows.join("\n");
 }
 
 function renderBlock(b: EmailBlock): string {
@@ -95,10 +164,33 @@ function renderBlock(b: EmailBlock): string {
       return `<tr><td style="padding:12px 0;"><div style="height:2px;background:${BRAND.crimson};width:48px;"></div></td></tr>`;
     case "spacer":
       return `<tr><td style="height:${Math.max(4, Math.min(120, b.size))}px;line-height:${Math.max(4, Math.min(120, b.size))}px;font-size:0;">&nbsp;</td></tr>`;
+    case "columns2":
+      return `<tr><td style="padding:8px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="50%" valign="top" style="padding-right:10px;font-family:${BRAND.sans};color:${BRAND.text};font-size:15px;line-height:1.6;">${richText(b.left)}</td>
+            <td width="50%" valign="top" style="padding-left:10px;font-family:${BRAND.sans};color:${BRAND.text};font-size:15px;line-height:1.6;">${richText(b.right)}</td>
+          </tr>
+        </table>
+      </td></tr>`;
+    case "columns3":
+      return `<tr><td style="padding:8px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+          <tr>
+            <td width="33%" valign="top" style="padding-right:8px;font-family:${BRAND.sans};color:${BRAND.text};font-size:14px;line-height:1.55;">${richText(b.col1)}</td>
+            <td width="34%" valign="top" style="padding:0 4px;font-family:${BRAND.sans};color:${BRAND.text};font-size:14px;line-height:1.55;">${richText(b.col2)}</td>
+            <td width="33%" valign="top" style="padding-left:8px;font-family:${BRAND.sans};color:${BRAND.text};font-size:14px;line-height:1.55;">${richText(b.col3)}</td>
+          </tr>
+        </table>
+      </td></tr>`;
   }
 }
 
-export function renderBlocksToHtml(blocks: EmailBlock[]): string {
+export function renderBlocksToHtml(
+  blocks: EmailBlock[],
+  header: EmailHeader = DEFAULT_EMAIL_HEADER,
+): string {
+  const headerRows = renderHeaderRows(header);
   const rows = blocks.map(renderBlock).join("\n");
   return `<!doctype html>
 <html>
@@ -109,17 +201,12 @@ export function renderBlocksToHtml(blocks: EmailBlock[]): string {
       <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:${BRAND.card};border:1px solid ${BRAND.gold};border-radius:12px;">
         <tr><td style="padding:36px 40px;">
           <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
-${rows}
+${headerRows}${rows}
           </table>
         </td></tr>
         <tr><td style="padding:20px 40px;border-top:1px solid #262626;font-family:${BRAND.sans};color:${BRAND.muted};font-size:12px;text-align:center;">
-<<<<<<< HEAD
-          ${BRAND_NAME}<br/>
-          <span style="color:#6b6760;">${BRAND_TAGLINE}</span>
-=======
           Free Bleeders Mentorship<br/>
           <span style="color:#6b6760;">You are receiving this because you are part of our mentorship community.</span>
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
         </td></tr>
       </table>
     </td></tr>

@@ -31,23 +31,13 @@ export const BrandLayout = ({ preview, children }: BrandLayoutProps) => (
       <Container style={outer}>
         <Section style={brandBar}>
           <Text style={brandMark}>
-<<<<<<< HEAD
-            <span style={brandMarkAccent}>FREE BLEEDERS</span> &nbsp;|&nbsp; MENTORSHIP
-=======
-            <span style={brandMarkAccent}>FREE BLEEDERS</span> &nbsp;|&nbsp; MENTORSHIP HUB
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
-          </Text>
+            <span style={brandMarkAccent}>FREE BLEEDERS</span> &nbsp;|&nbsp; MENTORSHIP          </Text>
         </Section>
         <Container style={card}>{children}</Container>
         <Section>
           <Hr style={hr} />
           <Text style={footer}>
-<<<<<<< HEAD
-            {BRAND_NAME} &middot; {BRAND_TAGLINE}
-=======
-            Free Bleeders Mentorship &middot; Premium mentorship program
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
-          </Text>
+            {BRAND_NAME} &middot; {BRAND_TAGLINE}          </Text>
           <Text style={footerSub}>
             Questions? Reach us at{' '}
             <a href="mailto:support@mentorship.freebleeders.org" style={footerLink}>

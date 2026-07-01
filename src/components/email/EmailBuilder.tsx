@@ -4,28 +4,31 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import {
   DndContext,
+  DragOverlay,
   closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
   type DragEndEvent,
+  type DragStartEvent,
 } from "@dnd-kit/core";
-import {
-  arrayMove,
-  SortableContext,
-  sortableKeyboardCoordinates,
-  useSortable,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import {
   type EmailBlock,
   type BlockType,
+  type EmailHeader,
+  DEFAULT_EMAIL_HEADER,
   BLOCK_LABELS,
   makeBlock,
   renderBlocksToHtml,
 } from "@/lib/email-blocks";
+import {
+  BLOCK_PALETTE,
+  BlockInspector,
+  EmailHeaderInspector,
+  SortableBlockRow,
+  DraggablePaletteItem,
+  CanvasDropZone,
+  handleEditorDragEnd,
+  useBlockDragSensors,
+} from "@/components/email/email-editor-parts";
 import {
   listTemplates,
   saveTemplate,
@@ -39,16 +42,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import {
-  GripVertical,
   Trash2,
-  Type,
-  Heading,
-  Image as ImageIcon,
-  MousePointerClick,
-  Minus,
-  MoveVertical,
   Sparkles,
   Save,
   Library,
@@ -58,76 +53,6 @@ import {
   Upload,
 } from "lucide-react";
 
-const PALETTE: { type: BlockType; icon: React.ComponentType<{ className?: string }> }[] = [
-  { type: "heading", icon: Heading },
-  { type: "text", icon: Type },
-  { type: "image", icon: ImageIcon },
-  { type: "button", icon: MousePointerClick },
-  { type: "divider", icon: Minus },
-  { type: "spacer", icon: MoveVertical },
-];
-
-function SortableRow({
-  block,
-  selected,
-  onSelect,
-  onDelete,
-}: {
-  block: EmailBlock;
-  selected: boolean;
-  onSelect: () => void;
-  onDelete: () => void;
-}) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: block.id,
-  });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
-  const preview =
-    block.type === "heading" || block.type === "text"
-      ? block.text
-      : block.type === "button"
-        ? `Button · ${block.text}`
-        : block.type === "image"
-          ? `Image${block.src ? "" : " (empty)"}`
-          : BLOCK_LABELS[block.type];
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      onClick={onSelect}
-      className={`group flex items-center gap-2 rounded-lg border p-2.5 text-sm transition-colors ${
-        selected ? "border-gold bg-gold/5" : "border-border hover:border-gold/40"
-      }`}
-    >
-      <button
-        type="button"
-        className="cursor-grab touch-none text-muted-foreground hover:text-foreground"
-        {...attributes}
-        {...listeners}
-        aria-label="Drag to reorder"
-      >
-        <GripVertical className="h-4 w-4" />
-      </button>
-      <Badge variant="outline" className="shrink-0 text-[10px] uppercase">
-        {BLOCK_LABELS[block.type]}
-      </Badge>
-      <span className="min-w-0 flex-1 truncate text-muted-foreground">{preview}</span>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          onDelete();
-        }}
-        className="text-muted-foreground opacity-0 transition-opacity hover:text-rose group-hover:opacity-100"
-        aria-label="Delete block"
-      >
-        <Trash2 className="h-4 w-4" />
-      </button>
-    </div>
-  );
-}
-
 export function EmailBuilder() {
   const qc = useQueryClient();
   const [blocks, setBlocks] = useState<EmailBlock[]>([
@@ -136,7 +61,9 @@ export function EmailBuilder() {
     makeBlock("button"),
   ]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  // "blocks" = structured builder; "html" = AI-generated raw HTML template.
+  const [emailHeader, setEmailHeader] = useState<EmailHeader>({ ...DEFAULT_EMAIL_HEADER });
+  const [draggingType, setDraggingType] = useState<BlockType | null>(null);
+  const [canvasOver, setCanvasOver] = useState(false);
   const [mode, setMode] = useState<"blocks" | "html">("blocks");
   const [rawHtml, setRawHtml] = useState("");
 
@@ -146,15 +73,11 @@ export function EmailBuilder() {
   const [prompt, setPrompt] = useState("");
 
   const fileRef = useRef<HTMLInputElement>(null);
-
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
-  );
+  const sensors = useBlockDragSensors();
 
   const html = useMemo(
-    () => (mode === "blocks" ? renderBlocksToHtml(blocks) : rawHtml),
-    [mode, blocks, rawHtml],
+    () => (mode === "blocks" ? renderBlocksToHtml(blocks, emailHeader) : rawHtml),
+    [mode, blocks, emailHeader, rawHtml],
   );
   const selected = blocks.find((b) => b.id === selectedId) ?? null;
 
@@ -188,14 +111,17 @@ export function EmailBuilder() {
     if (selectedId === id) setSelectedId(null);
   };
   const onDragEnd = (e: DragEndEvent) => {
-    const { active, over } = e;
-    if (over && active.id !== over.id) {
-      setBlocks((prev) => {
-        const oldI = prev.findIndex((b) => b.id === active.id);
-        const newI = prev.findIndex((b) => b.id === over.id);
-        return arrayMove(prev, oldI, newI);
-      });
-    }
+    setDraggingType(null);
+    setCanvasOver(false);
+    const result = handleEditorDragEnd(blocks, e);
+    if (!result) return;
+    setBlocks(result.blocks);
+    if (result.newBlockId) setSelectedId(result.newBlockId);
+  };
+
+  const onDragStart = (event: DragStartEvent) => {
+    const id = String(event.active.id);
+    if (id.startsWith("palette:")) setDraggingType(id.replace("palette:", "") as BlockType);
   };
 
   // ── AI ──
@@ -243,7 +169,7 @@ export function EmailBuilder() {
           name: name.trim() || "Untitled template",
           subject: subject || null,
           html,
-          blocks: mode === "blocks" ? blocks : null,
+          blocks: mode === "blocks" ? { blocks, header: emailHeader } : null,
         },
       }),
     onSuccess: (res: { template: { id: string } | null }) => {
@@ -273,7 +199,12 @@ export function EmailBuilder() {
     setCurrentId(t.id);
     setName(t.name);
     setSubject(t.subject ?? "");
-    if (Array.isArray(t.blocks) && t.blocks.length) {
+    if (t.blocks && typeof t.blocks === "object" && !Array.isArray(t.blocks) && "blocks" in (t.blocks as object)) {
+      const wrapped = t.blocks as { blocks: EmailBlock[]; header?: EmailHeader };
+      setBlocks(wrapped.blocks?.length ? wrapped.blocks : [makeBlock("heading"), makeBlock("text")]);
+      setEmailHeader({ ...DEFAULT_EMAIL_HEADER, ...wrapped.header });
+      setMode("blocks");
+    } else if (Array.isArray(t.blocks) && t.blocks.length) {
       setBlocks(t.blocks as EmailBlock[]);
       setMode("blocks");
     } else {
@@ -289,6 +220,7 @@ export function EmailBuilder() {
     setName("Untitled template");
     setSubject("");
     setBlocks([makeBlock("heading"), makeBlock("text"), makeBlock("button")]);
+    setEmailHeader({ ...DEFAULT_EMAIL_HEADER });
     setMode("blocks");
     setRawHtml("");
     setSelectedId(null);
@@ -297,6 +229,13 @@ export function EmailBuilder() {
   const aiBusy = genImage.isPending || genPrompt.isPending;
 
   return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragStart={onDragStart}
+      onDragEnd={onDragEnd}
+      onDragOver={({ over }) => setCanvasOver(!!over)}
+    >
     <div className="grid gap-4 lg:grid-cols-[260px_1fr_minmax(320px,420px)]">
       {/* ── Left: palette + library ── */}
       <div className="space-y-4">
@@ -305,20 +244,17 @@ export function EmailBuilder() {
             <CardTitle className="flex items-center gap-2 text-sm">
               <Plus className="h-4 w-4 text-gold" /> Blocks
             </CardTitle>
-            <CardDescription className="text-xs">Click to add, drag to reorder.</CardDescription>
+            <CardDescription className="text-xs">Drag onto canvas or click to add.</CardDescription>
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2">
-            {PALETTE.map(({ type, icon: Icon }) => (
-              <Button
+          <CardContent className="grid grid-cols-2 gap-1.5">
+            {BLOCK_PALETTE.map(({ type, icon, label }) => (
+              <DraggablePaletteItem
                 key={type}
-                variant="outline"
-                size="sm"
-                className="justify-start"
+                type={type}
+                icon={icon}
+                label={label ?? type}
                 onClick={() => addBlock(type)}
-              >
-                <Icon className="mr-1.5 h-3.5 w-3.5" />
-                {BLOCK_LABELS[type]}
-              </Button>
+              />
             ))}
           </CardContent>
         </Card>
@@ -395,11 +331,11 @@ export function EmailBuilder() {
           </CardHeader>
           <CardContent>
             {mode === "blocks" ? (
-              <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
-                <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
-                  <div className="space-y-2">
+              <SortableContext items={blocks.map((b) => b.id)} strategy={verticalListSortingStrategy}>
+                <CanvasDropZone isEmpty={blocks.length === 0} isOver={canvasOver && blocks.length === 0}>
+                  <div className="space-y-1.5">
                     {blocks.map((b) => (
-                      <SortableRow
+                      <SortableBlockRow
                         key={b.id}
                         block={b}
                         selected={b.id === selectedId}
@@ -407,14 +343,9 @@ export function EmailBuilder() {
                         onDelete={() => deleteBlock(b.id)}
                       />
                     ))}
-                    {blocks.length === 0 && (
-                      <p className="py-6 text-center text-xs text-muted-foreground">
-                        Add blocks from the left to start building.
-                      </p>
-                    )}
                   </div>
-                </SortableContext>
-              </DndContext>
+                </CanvasDropZone>
+              </SortableContext>
             ) : (
               <Textarea
                 value={rawHtml}
@@ -426,105 +357,64 @@ export function EmailBuilder() {
           </CardContent>
         </Card>
 
-        {/* Inspector for the selected block */}
-        {mode === "blocks" && selected && (
+        {mode === "blocks" && (
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm">Edit {BLOCK_LABELS[selected.type]}</CardTitle>
+              <CardTitle className="text-sm">Properties</CardTitle>
+              <CardDescription className="text-xs">
+                {selected ? `Editing ${BLOCK_LABELS[selected.type]}` : "Email header & global settings"}
+              </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              {(selected.type === "heading" || selected.type === "text") && (
+            <CardContent className="space-y-4">
+              <EmailHeaderInspector
+                header={emailHeader}
+                onChange={(patch) => setEmailHeader((h) => ({ ...h, ...patch }))}
+              />
+              {selected ? (
                 <>
-                  <Textarea
-                    value={selected.text}
-                    onChange={(e) => updateBlock(selected.id, { text: e.target.value } as Partial<EmailBlock>)}
-                    className="min-h-[90px]"
+                  <p className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+                    Block settings
+                  </p>
+                  <BlockInspector
+                    block={selected}
+                    onUpdate={(patch) => updateBlock(selected.id, patch)}
                   />
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="rewrite-instruction"
-                      placeholder="AI: e.g. make it warmer and shorter"
-                      className="h-8 text-xs"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") {
-                          const v = (e.target as HTMLInputElement).value.trim();
+                  {(selected.type === "heading" || selected.type === "text") && (
+                    <div className="flex items-center gap-2 border-t border-border pt-3">
+                      <Input
+                        id="rewrite-instruction"
+                        placeholder="AI: e.g. make it warmer and shorter"
+                        className="h-8 text-xs"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            const v = (e.target as HTMLInputElement).value.trim();
+                            if (v) rewrite.mutate({ id: selected.id, text: selected.text, instruction: v });
+                          }
+                        }}
+                      />
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={rewrite.isPending}
+                        onClick={() => {
+                          const el = document.getElementById("rewrite-instruction") as HTMLInputElement | null;
+                          const v = el?.value.trim();
                           if (v) rewrite.mutate({ id: selected.id, text: selected.text, instruction: v });
-                        }
-                      }}
-                    />
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled={rewrite.isPending}
-                      onClick={() => {
-                        const el = document.getElementById("rewrite-instruction") as HTMLInputElement | null;
-                        const v = el?.value.trim();
-                        if (v) rewrite.mutate({ id: selected.id, text: selected.text, instruction: v });
-                      }}
-                    >
-                      {rewrite.isPending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Wand2 className="h-3.5 w-3.5" />}
-                    </Button>
-                  </div>
+                        }}
+                      >
+                        {rewrite.isPending ? (
+                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                        ) : (
+                          <Wand2 className="h-3.5 w-3.5" />
+                        )}
+                      </Button>
+                    </div>
+                  )}
                 </>
-              )}
-              {selected.type === "image" && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Image URL</Label>
-                    <Input
-                      value={selected.src}
-                      onChange={(e) => updateBlock(selected.id, { src: e.target.value } as Partial<EmailBlock>)}
-                      placeholder="https://…"
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Alt text</Label>
-                    <Input
-                      value={selected.alt}
-                      onChange={(e) => updateBlock(selected.id, { alt: e.target.value } as Partial<EmailBlock>)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Link (optional)</Label>
-                    <Input
-                      value={selected.href ?? ""}
-                      onChange={(e) => updateBlock(selected.id, { href: e.target.value } as Partial<EmailBlock>)}
-                      placeholder="https://…"
-                    />
-                  </div>
-                </>
-              )}
-              {selected.type === "button" && (
-                <>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Label</Label>
-                    <Input
-                      value={selected.text}
-                      onChange={(e) => updateBlock(selected.id, { text: e.target.value } as Partial<EmailBlock>)}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs">Link URL</Label>
-                    <Input
-                      value={selected.href}
-                      onChange={(e) => updateBlock(selected.id, { href: e.target.value } as Partial<EmailBlock>)}
-                      placeholder="https://…"
-                    />
-                  </div>
-                </>
-              )}
-              {selected.type === "spacer" && (
-                <div className="space-y-1">
-                  <Label className="text-xs">Height (px)</Label>
-                  <Input
-                    type="number"
-                    value={selected.size}
-                    onChange={(e) => updateBlock(selected.id, { size: Number(e.target.value) || 0 } as Partial<EmailBlock>)}
-                  />
-                </div>
-              )}
-              {selected.type === "divider" && (
-                <p className="text-xs text-muted-foreground">A crimson accent divider. No options.</p>
+              ) : (
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  Select a block in the canvas to edit its content, or fill in the email header fields above.
+                </p>
               )}
             </CardContent>
           </Card>
@@ -615,5 +505,14 @@ export function EmailBuilder() {
         </Card>
       </div>
     </div>
+
+    <DragOverlay dropAnimation={null}>
+      {draggingType ? (
+        <div className="rounded-lg border border-gold bg-card px-3 py-2 text-xs font-medium shadow-lg">
+          {BLOCK_LABELS[draggingType]}
+        </div>
+      ) : null}
+    </DragOverlay>
+    </DndContext>
   );
 }

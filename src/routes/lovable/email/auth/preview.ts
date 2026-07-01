@@ -18,14 +18,9 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-<<<<<<< HEAD
 import { BRAND_NAME } from '@/lib/brand'
 
-const SITE_NAME = BRAND_NAME
-=======
-const SITE_NAME = "Free Bleeders Mentorship"
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
-const ROOT_DOMAIN = "mentorship.freebleeders.org"
+const SITE_NAME = BRAND_NAMEconst ROOT_DOMAIN = "mentorship.freebleeders.org"
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.

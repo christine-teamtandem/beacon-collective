@@ -19,12 +19,7 @@ import { sanitizeEnv } from "@/lib/config.server";
 import { BRAND_FROM_EMAIL, BRAND_NAME } from "@/lib/brand";
 
 // Verified sender identity (must match the domain delegated to Lovable / Resend).
-<<<<<<< HEAD
-export const SITE_NAME = BRAND_NAME;
-=======
-export const SITE_NAME = "Free Bleeders Mentorship";
->>>>>>> 53603d23bbc0580446ee745f92e99410419ad806
-export const FROM_DOMAIN = "mentorship.freebleeders.org";
+export const SITE_NAME = BRAND_NAME;export const FROM_DOMAIN = "mentorship.freebleeders.org";
 export const SENDER_DOMAIN = "notify.mentorship.freebleeders.org";
 export const DEFAULT_FROM = BRAND_FROM_EMAIL;
 
